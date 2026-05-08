@@ -12,7 +12,7 @@ import { Card } from '../components/ui/Card';
 import { 
   Save, Users, AlertCircle, Settings2, Check, X, Plus, 
   UserPlus, Trash2, Edit2, HelpCircle, Upload, Database, 
-  Loader2, GraduationCap 
+  Loader2, GraduationCap, FileText
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { QuickGuide } from '../components/ui/QuickGuide';
@@ -25,6 +25,7 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState<'usuarios' | 'cursos' | 'precos'>('usuarios');
   const [isImporting, setIsImporting] = useState(false);
   const [importStats, setImportStats] = useState<{ total: number; success: number } | null>(null);
+  const [pendingData, setPendingData] = useState<any[] | null>(null);
 
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [courseSelectionUser, setCourseSelectionUser] = useState<any | null>(null);
@@ -72,17 +73,14 @@ export default function Admin() {
     }
   };
 
-  const handleImportExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setIsImporting(true);
-    setImportStats(null);
-    const toastId = toast.loading('Processando planilha...');
-
+    const toastId = toast.loading('Lendo planilha...');
     try {
       const reader = new FileReader();
-      reader.onload = async (e) => {
+      reader.onload = (e) => {
         const bstr = e.target?.result;
         const wb = XLSX.read(bstr, { type: 'binary' });
         const wsname = wb.SheetNames[0];
@@ -91,12 +89,11 @@ export default function Admin() {
 
         if (data.length === 0) {
           toast.error('Planilha vazia ou inválida.', { id: toastId });
-          setIsImporting(false);
           return;
         }
 
-        // Mapear e limpar dados conforme os nomes exatos das colunas identificados na análise
-        const cursosToUpsert = data.map((row: any) => ({
+        // Mapear dados
+        const mapped = data.map((row: any) => ({
           marca: row['Marca'],
           unidade: row['Unidade'],
           curso: row['Curso'],
@@ -110,29 +107,44 @@ export default function Admin() {
           updated_at: new Date().toISOString()
         }));
 
-        // 1. Limpar a tabela antes de inserir os novos (Refresh Total)
-        const { error: deleteError } = await supabase
-          .from('cursos_precos')
-          .delete()
-          .neq('id', '00000000-0000-0000-0000-000000000000'); // Deleta tudo
-
-        if (deleteError) throw deleteError;
-
-        // 2. Inserir os novos dados
-        const { error: insertError } = await supabase
-          .from('cursos_precos')
-          .insert(cursosToUpsert);
-
-        if (insertError) throw insertError;
-
-        setImportStats({ total: data.length, success: data.length });
-        toast.success(`${data.length} cursos importados com sucesso!`, { id: toastId });
-        setIsImporting(false);
+        setPendingData(mapped);
+        toast.success(`Planilha pronta! ${mapped.length} cursos detectados.`, { id: toastId });
       };
       reader.readAsBinaryString(file);
     } catch (err) {
+      toast.error('Erro ao ler arquivo.', { id: toastId });
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!pendingData) return;
+    setIsImporting(true);
+    setImportStats(null);
+    const toastId = toast.loading('Limpando banco e enviando novos dados...');
+
+    try {
+      // 1. Limpar a tabela antes de inserir os novos (Refresh Total)
+      const { error: deleteError } = await supabase
+        .from('cursos_precos')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Deleta tudo
+
+      if (deleteError) throw deleteError;
+
+      // 2. Inserir os novos dados
+      const { error: insertError } = await supabase
+        .from('cursos_precos')
+        .insert(pendingData);
+
+      if (insertError) throw insertError;
+
+      setImportStats({ total: pendingData.length, success: pendingData.length });
+      setPendingData(null);
+      toast.success(`Sucesso! ${pendingData.length} cursos atualizados.`, { id: toastId });
+    } catch (err) {
       console.error(err);
-      toast.error('Erro ao importar planilha. Verifique as colunas.', { id: toastId });
+      toast.error('Erro ao atualizar banco de dados.', { id: toastId });
+    } finally {
       setIsImporting(false);
     }
   };
@@ -259,21 +271,47 @@ export default function Admin() {
                   <AlertCircle size={18} className="text-amber-500" /> Formato do Arquivo
                 </div>
                 <p className="text-[12px] text-slate-500 font-medium">
-                  Apenas <strong>.XLSX</strong> ou <strong>.XLS</strong>. O sistema faz o "upsert" automático.
+                  Apenas <strong>.XLSX</strong> ou <strong>.XLS</strong>. O sistema faz a limpeza total antes de inserir.
                 </p>
               </div>
             </div>
 
-            <label className="relative cursor-pointer group">
-              <input type="file" className="hidden" accept=".xlsx, .xls" onChange={handleImportExcel} disabled={isImporting} />
-              <div className={cn(
-                "flex items-center gap-3 px-10 py-5 rounded-2xl font-black text-[16px] transition-all shadow-xl",
-                isImporting ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "bg-navy-900 text-white hover:bg-navy-800 hover:scale-[1.02]"
-              )}>
-                {isImporting ? <Loader2 className="animate-spin" size={24} /> : <Upload size={24} />}
-                {isImporting ? 'PROCESSANDO...' : 'IMPORTAR PLANILHA AGORA'}
-              </div>
-            </label>
+            <div className="flex flex-col gap-4 w-full">
+              {!pendingData ? (
+                <label className="relative cursor-pointer group w-full">
+                  <input type="file" className="hidden" accept=".xlsx, .xls" onChange={handleFileSelect} />
+                  <div className="flex items-center justify-center gap-3 px-10 py-5 rounded-2xl font-black text-[16px] transition-all shadow-xl bg-white border-2 border-dashed border-navy-200 text-navy-600 hover:border-navy-900 hover:text-navy-900">
+                    <Upload size={24} />
+                    SELECIONAR ARQUIVO EXCEL
+                  </div>
+                </label>
+              ) : (
+                <div className="w-full space-y-4 animate-fade-in">
+                  <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-between">
+                    <div className="flex items-center gap-3 text-blue-900 font-bold text-[14px]">
+                      <FileText size={20} />
+                      {pendingData.length} cursos detectados na planilha
+                    </div>
+                    <button onClick={() => setPendingData(null)} className="text-blue-500 hover:text-blue-700">
+                      <X size={18} />
+                    </button>
+                  </div>
+                  
+                  <Button 
+                    onClick={handleConfirmImport} 
+                    isLoading={isImporting} 
+                    className="w-full h-16 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[18px] shadow-2xl"
+                  >
+                    {!isImporting && <Save size={24} className="mr-2" />}
+                    ENVIAR E ATUALIZAR PLANILHA AGORA
+                  </Button>
+                  
+                  <p className="text-[11px] text-red-500 font-bold uppercase tracking-widest">
+                    ⚠️ Atenção: Ao clicar, os preços antigos serão apagados.
+                  </p>
+                </div>
+              )}
+            </div>
 
             {importStats && (
               <div className="mt-8 text-[14px] font-bold text-emerald-600 bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100 animate-bounce">
