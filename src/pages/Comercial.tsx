@@ -34,7 +34,8 @@ export default function Comercial() {
     curso: '',
     turno: '',
     modalidade: 'VES/ENE',
-    mensalidade_atual: '',
+    mensalidade_atual: '', // Aqui vamos guardar o valor LÍQUIDO atual
+    mensalidade_bruta: '', // Campo oculto para cálculo
     desc_percentual_atual: '',
     mensalidade_solicitada: '',
     desc_percentual_solicitado: '',
@@ -94,23 +95,36 @@ export default function Comercial() {
 
       if (matching && cursoSel && turnoSel) {
         const isVes = modalidadeSel === 'VES/ENE';
-        updatedFormData.mensalidade_atual = matching.mensalidade_bruta.toString();
+        
+        // Mensalidade Atual = Valor LÍQUIDO da modalidade
+        const liquidValue = isVes ? matching.mensalidade_ves_ene : matching.mensalidade_trf_pdd;
+        
+        updatedFormData.mensalidade_atual = liquidValue.toString();
+        updatedFormData.mensalidade_bruta = matching.mensalidade_bruta.toString();
         updatedFormData.desc_percentual_atual = isVes 
           ? (matching.desc_percentual_ves_ene * 100).toFixed(0) 
           : (matching.desc_percentual_trf_pdd * 100).toFixed(0);
         
-        // Mantém campos de solicitação vazios
-        updatedFormData.mensalidade_solicitada = '';
-        updatedFormData.desc_percentual_solicitado = '';
+        // Se já houver um desconto solicitado, recalcula a mensalidade solicitada com a nova bruta
+        if (updatedFormData.desc_percentual_solicitado) {
+          const descPercent = parseFloat(updatedFormData.desc_percentual_solicitado);
+          const bruta = parseFloat(updatedFormData.mensalidade_bruta);
+          if (!isNaN(descPercent) && !isNaN(bruta)) {
+            updatedFormData.mensalidade_solicitada = (bruta * (1 - descPercent / 100)).toFixed(2);
+          }
+        }
       } else {
         updatedFormData.mensalidade_atual = '';
+        updatedFormData.mensalidade_bruta = '';
         updatedFormData.desc_percentual_atual = '';
+        updatedFormData.mensalidade_solicitada = '';
+        updatedFormData.desc_percentual_solicitado = '';
       }
       
       setFormData(updatedFormData);
     } else if (name === 'desc_percentual_solicitado') {
       const descPercent = parseFloat(value);
-      const bruta = parseFloat(formData.mensalidade_atual);
+      const bruta = parseFloat(formData.mensalidade_bruta);
       let solicitada = '';
 
       if (!isNaN(descPercent) && !isNaN(bruta)) {
@@ -158,7 +172,7 @@ export default function Comercial() {
       setEditingId(null);
       setFormData({ 
         nome: '', inscricao: '', cpf: '', curso: '', turno: '', modalidade: 'VES/ENE',
-        mensalidade_atual: '', desc_percentual_atual: '', 
+        mensalidade_atual: '', mensalidade_bruta: '', desc_percentual_atual: '', 
         mensalidade_solicitada: '', desc_percentual_solicitado: '', 
         unidade: 'OLINDA', regional: 'Regional A' 
       });
@@ -182,6 +196,7 @@ export default function Comercial() {
       turno: req.turno || '',
       modalidade: req.modalidade || 'VES/ENE',
       mensalidade_atual: req.mensalidade_atual?.toString() || '',
+      mensalidade_bruta: req.mensalidade_bruta?.toString() || '',
       desc_percentual_atual: req.desc_percentual_atual?.toString() || '',
       mensalidade_solicitada: req.mensalidade_solicitada?.toString() || '',
       desc_percentual_solicitado: req.desc_percentual_solicitado?.toString() || '',
@@ -266,7 +281,7 @@ export default function Comercial() {
               <h4 className="text-[14px] font-bold text-navy-900 border-l-4 border-brand-blue pl-3">Valores</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[12px] font-bold text-slate-500 mb-1">Mensalidade Atual</label>
+                  <label className="block text-[12px] font-bold text-slate-500 mb-1">Mensalidade Atual (c/ desc.)</label>
                   <div className="h-10 px-3 flex items-center bg-slate-50 border border-slate-200 rounded-lg font-bold text-navy-900">
                     {formatCurrency(formData.mensalidade_atual)}
                   </div>
@@ -288,6 +303,7 @@ export default function Comercial() {
                   </div>
                 </div>
               </div>
+              <p className="text-[10px] text-slate-400 font-medium italic">* O cálculo do novo valor é baseado na mensalidade bruta do curso.</p>
             </div>
           </div>
 
