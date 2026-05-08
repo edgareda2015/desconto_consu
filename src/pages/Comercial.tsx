@@ -44,7 +44,6 @@ export default function Comercial() {
     desc_percentual_atual: '',
     mensalidade_solicitada: '',
     desc_percentual_solicitado: '',
-    numero_chamado: '',
     unidade: 'OLINDA',
     regional: 'Regional A'
   });
@@ -95,7 +94,7 @@ export default function Comercial() {
         desc_percentual_atual: formData.desc_percentual_atual ? parseFloat(formData.desc_percentual_atual) : 0,
         mensalidade_solicitada: formData.mensalidade_solicitada ? parseFloat(formData.mensalidade_solicitada) : null,
         desc_percentual_solicitado: formData.desc_percentual_solicitado ? parseFloat(formData.desc_percentual_solicitado) : 0,
-        numero_chamado: formData.numero_chamado || null,
+        desc_percentual_solicitado: formData.desc_percentual_solicitado ? parseFloat(formData.desc_percentual_solicitado) : 0,
         unidade: formData.unidade,
         regional: formData.regional,
         unit_id: selectedUnit?.id,
@@ -125,7 +124,7 @@ export default function Comercial() {
         nome: '', inscricao: '', cpf: '', curso: '', 
         mensalidade_atual: '', desc_percentual_atual: '', 
         mensalidade_solicitada: '', desc_percentual_solicitado: '', 
-        numero_chamado: '', unidade: 'OLINDA', regional: 'Regional A' 
+        unidade: 'OLINDA', regional: 'Regional A' 
       });
       fetchData();
     } catch (err) {
@@ -148,7 +147,7 @@ export default function Comercial() {
       desc_percentual_atual: req.desc_percentual_atual?.toString() || '',
       mensalidade_solicitada: req.mensalidade_solicitada?.toString() || '',
       desc_percentual_solicitado: req.desc_percentual_solicitado?.toString() || '',
-      numero_chamado: req.numero_chamado || '',
+      desc_percentual_solicitado: req.desc_percentual_solicitado?.toString() || '',
       unidade: req.unidade || 'OLINDA',
       regional: req.regional || 'Regional A'
     });
@@ -351,14 +350,6 @@ export default function Comercial() {
                 options={cursos.map(c => ({ value: c, label: c }))}
                 placeholder="Selecione o curso..."
                 icon={<GraduationCap size={16} />}
-              />
-              <Input 
-                label="Nº do Chamado" 
-                name="numero_chamado" 
-                value={formData.numero_chamado} 
-                onChange={handleInputChange} 
-                placeholder="CH-00000"
-                icon={<Hash size={16} />}
               />
             </div>
 
