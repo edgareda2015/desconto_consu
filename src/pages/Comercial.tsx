@@ -34,9 +34,8 @@ export default function Comercial() {
     curso: '',
     turno: '',
     modalidade: 'VES/ENE',
-    mensalidade_atual: '', // Aqui vamos guardar o valor LÍQUIDO atual
-    mensalidade_bruta: '', // Campo oculto para cálculo
-    desc_percentual_atual: '',
+    mensalidade_atual: '', // Aqui vamos mostrar o VALOR CHEIO
+    desc_percentual_atual: '', // Aqui a porcentagem da modalidade
     mensalidade_solicitada: '',
     desc_percentual_solicitado: '',
     unidade: 'OLINDA',
@@ -96,39 +95,35 @@ export default function Comercial() {
       if (matching && cursoSel && turnoSel) {
         const isVes = modalidadeSel === 'VES/ENE';
         
-        // Mensalidade Atual = Valor LÍQUIDO da modalidade
-        const liquidValue = isVes ? matching.mensalidade_ves_ene : matching.mensalidade_trf_pdd;
+        // Mensalidade Atual = VALOR CHEIO (Bruto)
+        updatedFormData.mensalidade_atual = matching.mensalidade_bruta.toString();
         
-        updatedFormData.mensalidade_atual = liquidValue.toString();
-        updatedFormData.mensalidade_bruta = matching.mensalidade_bruta.toString();
+        // Desc. Atual = Porcentagem da modalidade sobre o valor cheio
         updatedFormData.desc_percentual_atual = isVes 
           ? (matching.desc_percentual_ves_ene * 100).toFixed(0) 
           : (matching.desc_percentual_trf_pdd * 100).toFixed(0);
         
-        // Se já houver um desconto solicitado, recalcula a mensalidade solicitada com a nova bruta
+        // Recalcula a solicitada se já houver um desconto digitado
         if (updatedFormData.desc_percentual_solicitado) {
           const descPercent = parseFloat(updatedFormData.desc_percentual_solicitado);
-          const bruta = parseFloat(updatedFormData.mensalidade_bruta);
-          if (!isNaN(descPercent) && !isNaN(bruta)) {
-            updatedFormData.mensalidade_solicitada = (bruta * (1 - descPercent / 100)).toFixed(2);
+          const cheia = parseFloat(updatedFormData.mensalidade_atual);
+          if (!isNaN(descPercent) && !isNaN(cheia)) {
+            updatedFormData.mensalidade_solicitada = (cheia * (1 - descPercent / 100)).toFixed(2);
           }
         }
       } else {
         updatedFormData.mensalidade_atual = '';
-        updatedFormData.mensalidade_bruta = '';
         updatedFormData.desc_percentual_atual = '';
-        updatedFormData.mensalidade_solicitada = '';
-        updatedFormData.desc_percentual_solicitado = '';
       }
       
       setFormData(updatedFormData);
     } else if (name === 'desc_percentual_solicitado') {
       const descPercent = parseFloat(value);
-      const bruta = parseFloat(formData.mensalidade_bruta);
+      const cheia = parseFloat(formData.mensalidade_atual);
       let solicitada = '';
 
-      if (!isNaN(descPercent) && !isNaN(bruta)) {
-        solicitada = (bruta * (1 - descPercent / 100)).toFixed(2);
+      if (!isNaN(descPercent) && !isNaN(cheia)) {
+        solicitada = (cheia * (1 - descPercent / 100)).toFixed(2);
       }
 
       setFormData(prev => ({ 
@@ -172,7 +167,7 @@ export default function Comercial() {
       setEditingId(null);
       setFormData({ 
         nome: '', inscricao: '', cpf: '', curso: '', turno: '', modalidade: 'VES/ENE',
-        mensalidade_atual: '', mensalidade_bruta: '', desc_percentual_atual: '', 
+        mensalidade_atual: '', desc_percentual_atual: '', 
         mensalidade_solicitada: '', desc_percentual_solicitado: '', 
         unidade: 'OLINDA', regional: 'Regional A' 
       });
@@ -196,7 +191,6 @@ export default function Comercial() {
       turno: req.turno || '',
       modalidade: req.modalidade || 'VES/ENE',
       mensalidade_atual: req.mensalidade_atual?.toString() || '',
-      mensalidade_bruta: req.mensalidade_bruta?.toString() || '',
       desc_percentual_atual: req.desc_percentual_atual?.toString() || '',
       mensalidade_solicitada: req.mensalidade_solicitada?.toString() || '',
       desc_percentual_solicitado: req.desc_percentual_solicitado?.toString() || '',
@@ -273,43 +267,42 @@ export default function Comercial() {
               />
               <div className="grid grid-cols-2 gap-4">
                 <Select label="Turno" required name="turno" value={formData.turno} onChange={handleInputChange} options={turnosDisponiveis} disabled={!formData.curso} />
-                <Select label="Tipo Ingresso" required name="modalidade" value={formData.modalidade} onChange={handleInputChange} options={[{value:'VES/ENE', label:'VES/ENE'}, {value:'TRF/PDD', label:'TRF/PDD'}]} />
+                <Select label="Modalidade Ingresso" required name="modalidade" value={formData.modalidade} onChange={handleInputChange} options={[{value:'VES/ENE', label:'VES/ENE'}, {value:'TRF/PDD', label:'TRF/PDD'}]} />
               </div>
             </div>
 
             <div className="space-y-4">
-              <h4 className="text-[14px] font-bold text-navy-900 border-l-4 border-brand-blue pl-3">Valores</h4>
+              <h4 className="text-[14px] font-bold text-navy-900 border-l-4 border-brand-blue pl-3">Localização e Mensalidades</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[12px] font-bold text-slate-500 mb-1">Mensalidade Atual (c/ desc.)</label>
-                  <div className="h-10 px-3 flex items-center bg-slate-50 border border-slate-200 rounded-lg font-bold text-navy-900">
+                  <label className="block text-[12px] font-bold text-navy-700 mb-1.5">Mensalidade Bruta (Valor Cheio)</label>
+                  <div className="h-[42px] px-3 flex items-center bg-slate-50 border border-slate-200 rounded-lg text-[14px] font-bold text-navy-900">
                     {formatCurrency(formData.mensalidade_atual)}
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[12px] font-bold text-slate-500 mb-1">Desc. % Atual</label>
-                  <div className="h-10 px-3 flex items-center bg-slate-50 border border-slate-200 rounded-lg font-bold text-navy-900">
+                  <label className="block text-[12px] font-bold text-navy-700 mb-1.5">Desc. % Atual</label>
+                  <div className="h-[42px] px-3 flex items-center bg-slate-50 border border-slate-200 rounded-lg text-[14px] font-bold text-navy-900">
                     {formData.desc_percentual_atual || 0}%
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
-                <Input label="Desc. % Solicitado" required type="number" name="desc_percentual_solicitado" value={formData.desc_percentual_solicitado} onChange={handleInputChange} placeholder="Ex: 60" />
+                <Input label="Desc. % Solicitado" required type="number" name="desc_percentual_solicitado" value={formData.desc_percentual_solicitado} onChange={handleInputChange} placeholder="Ex: 65" />
                 <div>
                   <label className="block text-[12px] font-bold text-brand-blue mb-1">Mensalidade Solicitada</label>
-                  <div className="h-10 px-3 flex items-center bg-blue-50 border border-blue-200 rounded-lg font-black text-brand-blue">
+                  <div className="h-[42px] px-3 flex items-center bg-emerald-50 border border-emerald-200 rounded-lg text-[14px] font-bold text-emerald-700">
                     {formatCurrency(formData.mensalidade_solicitada)}
                   </div>
                 </div>
               </div>
-              <p className="text-[10px] text-slate-400 font-medium italic">* O cálculo do novo valor é baseado na mensalidade bruta do curso.</p>
             </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
-            <Button type="submit" isLoading={submitting}>Salvar Solicitação</Button>
+            <Button type="submit" isLoading={submitting}>Enviar Solicitação</Button>
           </div>
         </form>
       </Modal>
