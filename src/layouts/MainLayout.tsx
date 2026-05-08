@@ -228,8 +228,21 @@ export const MainLayout = () => {
 
       {/* ═══ MAIN CONTENT ═══ */}
       <main className="flex-1 overflow-x-hidden overflow-y-auto bg-bg">
-        <div className="layout-container page-content">
-          <Outlet />
+        <div className="layout-container page-content flex flex-col min-h-full">
+          <div className="flex-1">
+            <Outlet />
+          </div>
+          
+          <footer className="py-8 mt-auto border-t border-slate-100">
+            <div className="text-center space-y-1">
+              <p className="text-[12px] font-semibold text-slate-400">
+                © 2026 UNINASSAU. Todos os direitos reservados.
+              </p>
+              <p className="text-[11px] font-bold text-navy-400">
+                Desenvolvido por <span className="text-navy-600">Edgar Tavares</span>.
+              </p>
+            </div>
+          </footer>
         </div>
       </main>
     </div>

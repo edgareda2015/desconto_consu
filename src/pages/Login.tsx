@@ -376,8 +376,13 @@ export const LoginPage = () => {
             </AnimatePresence>
           </div>
           
-          <div className="text-center mt-8">
-            <p className="text-[12px] font-bold text-navy-400">© {new Date().getFullYear()} Grupo Ser Educacional</p>
+          <div className="text-center mt-8 space-y-1">
+            <p className="text-[12px] font-semibold text-slate-400">
+              © 2026 UNINASSAU. Todos os direitos reservados.
+            </p>
+            <p className="text-[11px] font-bold text-navy-400">
+              Desenvolvido por <span className="text-navy-600">Edgar Tavares</span>.
+            </p>
           </div>
         </div>
       </div>
