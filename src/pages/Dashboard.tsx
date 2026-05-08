@@ -419,10 +419,7 @@ function StatCard({ title, value, icon, trend, color }: any) {
           <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">{title}</p>
           <h4 className="text-[26px] font-black text-navy-900 tracking-tight leading-none mb-4">{value}</h4>
           <div className="flex items-center gap-1.5">
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${bgColors[color]}`}>
-              {trend}
-            </span>
-            <span className="text-[10px] font-semibold text-slate-400">vs. período ant.</span>
+            {/* Removido o rodapé de comparação conforme solicitado */}
           </div>
         </div>
         <div className={`p-3.5 rounded-2xl ${bgColors[color]} border group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
