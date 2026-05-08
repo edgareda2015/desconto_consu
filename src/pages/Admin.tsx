@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSession } from '@clerk/clerk-react';
 import { supabase } from '../lib/supabase';
 import { Button } from '../components/ui/Button';
 import { Table, Thead, Tbody, Tr, Th, Td } from '../components/ui/Table';
@@ -20,6 +21,7 @@ import toast from 'react-hot-toast';
 import { cn } from '../lib/cn';
 
 export default function Admin() {
+  const { session } = useSession();
   const [usuarios, setUsuarios] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'usuarios' | 'cursos' | 'precos'>('usuarios');
@@ -141,12 +143,21 @@ export default function Admin() {
   };
 
   const handleConfirmImport = async () => {
-    if (!pendingData) return;
+    if (!pendingData || !session) return;
     setIsImporting(true);
     setImportStats(null);
     const toastId = toast.loading('Limpando banco e enviando novos dados...');
 
     try {
+      // Pega o token do Clerk para autenticar no Supabase
+      const supabaseToken = await session.getToken({ template: 'supabase' });
+      
+      // Injeta o token nas chamadas (headers)
+      const { data: { user } } = await supabase.auth.setSession({
+        access_token: supabaseToken,
+        refresh_token: '', // Clerk gerencia o refresh
+      });
+
       // 1. Limpar a tabela antes de inserir os novos (Refresh Total)
       const { error: deleteError } = await supabase
         .from('cursos_precos')
