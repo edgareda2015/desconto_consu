@@ -70,28 +70,37 @@ export default function Comercial() {
     }
   };
 
+  // Turnos disponíveis baseado no curso selecionado
+  const turnosDisponiveis = formData.curso 
+    ? Array.from(new Set(cursosPrecos.filter(c => c.curso === formData.curso).map(c => c.turno))).map(t => ({ value: t, label: t }))
+    : [];
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
     // Auto-preenchimento baseado na planilha
     if (name === 'curso' || name === 'turno' || name === 'modalidade') {
       const updatedFormData = { ...formData, [name]: value };
-      const cursoEncontrado = cursosPrecos.find(c => 
-        c.curso === (name === 'curso' ? value : formData.curso) && 
-        c.turno === (name === 'turno' ? value : formData.turno)
-      );
+      
+      // Se trocou o curso, limpa o turno (pois os turnos podem ser diferentes)
+      if (name === 'curso') {
+        updatedFormData.turno = '';
+        updatedFormData.mensalidade_atual = '';
+        updatedFormData.desc_percentual_atual = '';
+      }
 
-      if (cursoEncontrado) {
-        const isVes = (name === 'modalidade' ? value : formData.modalidade) === 'VES/ENE';
-        updatedFormData.mensalidade_atual = cursoEncontrado.mensalidade_bruta?.toString() || '';
+      const cursoSel = name === 'curso' ? value : updatedFormData.curso;
+      const turnoSel = name === 'turno' ? value : updatedFormData.turno;
+      const modalidadeSel = name === 'modalidade' ? value : updatedFormData.modalidade;
+
+      const cursoEncontrado = cursosPrecos.find(c => c.curso === cursoSel && c.turno === turnoSel);
+
+      if (cursoEncontrado && cursoSel && turnoSel) {
+        const isVes = modalidadeSel === 'VES/ENE';
+        updatedFormData.mensalidade_atual = parseFloat(cursoEncontrado.mensalidade_bruta).toFixed(2);
         updatedFormData.desc_percentual_atual = isVes 
-          ? (cursoEncontrado.desc_percentual_ves_ene * 100).toFixed(0) 
-          : (cursoEncontrado.desc_percentual_trf_pdd * 100).toFixed(0);
-        
-        // Sugerir mensalidade solicitada já com desconto
-        const valorComDesconto = isVes ? cursoEncontrado.mensalidade_ves_ene : cursoEncontrado.mensalidade_trf_pdd;
-        updatedFormData.mensalidade_solicitada = valorComDesconto?.toString() || '';
-        updatedFormData.desc_percentual_solicitado = updatedFormData.desc_percentual_atual;
+          ? (parseFloat(cursoEncontrado.desc_percentual_ves_ene) * 100).toFixed(0) 
+          : (parseFloat(cursoEncontrado.desc_percentual_trf_pdd) * 100).toFixed(0);
       }
       
       setFormData(updatedFormData);
@@ -392,11 +401,9 @@ export default function Comercial() {
                   name="turno" 
                   value={formData.turno} 
                   onChange={handleInputChange} 
-                  options={[
-                    { value: 'Manhã', label: 'Manhã' },
-                    { value: 'Noite', label: 'Noite' }
-                  ]}
-                  placeholder="Selecione..."
+                  options={turnosDisponiveis}
+                  placeholder={formData.curso ? 'Selecione o turno...' : 'Selecione o curso primeiro'}
+                  disabled={!formData.curso}
                 />
                 <Select 
                   label="Modalidade Ingresso" 
@@ -422,6 +429,8 @@ export default function Comercial() {
                   value={formData.mensalidade_atual} 
                   onChange={handleInputChange} 
                   placeholder="R$ 0,00"
+                  readOnly
+                  className="bg-slate-50 cursor-not-allowed"
                 />
                 <Input 
                   label="Desc. % Atual" 
@@ -431,6 +440,8 @@ export default function Comercial() {
                   value={formData.desc_percentual_atual} 
                   onChange={handleInputChange} 
                   placeholder="%"
+                  readOnly
+                  className="bg-slate-50 cursor-not-allowed"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
