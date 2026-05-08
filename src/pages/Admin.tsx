@@ -81,38 +81,45 @@ export default function Admin() {
     try {
       const reader = new FileReader();
       reader.onload = (e) => {
-        const bstr = e.target?.result;
-        const wb = XLSX.read(bstr, { type: 'binary' });
-        const wsname = wb.SheetNames[0];
-        const ws = wb.Sheets[wsname];
-        const data = XLSX.utils.sheet_to_json(ws);
+        try {
+          const bstr = e.target?.result;
+          const wb = XLSX.read(bstr, { type: 'binary' });
+          const wsname = wb.SheetNames[0];
+          const ws = wb.Sheets[wsname];
+          const data = XLSX.utils.sheet_to_json(ws);
 
-        if (data.length === 0) {
-          toast.error('Planilha vazia ou inválida.', { id: toastId });
-          return;
+          if (data.length === 0) {
+            toast.error('Planilha vazia ou inválida.', { id: toastId });
+            return;
+          }
+
+          // Mapear dados
+          const mapped = data.map((row: any) => ({
+            marca: row['Marca'],
+            unidade: row['Unidade'],
+            curso: row['Curso'],
+            semestres: row['Semestres'],
+            turno: row['Turno'],
+            mensalidade_bruta: row[' Mensalidade\r\ndia 30 (R$) '] || row['Mensalidade dia 30 (R$)'],
+            desc_percentual_ves_ene: row['Desc. %\r\nVES/ENE'] || row['Desc. % VES/ENE'],
+            mensalidade_ves_ene: row[' Demais Mens. (R$)\r\nVES/ENE '] || row['Demais Mens. (R$) VES/ENE'],
+            desc_percentual_trf_pdd: row['Desc.%\r\nTRF/PDD'] || row['Desc.% TRF/PDD'],
+            mensalidade_trf_pdd: row[' Demais Mens. (R$)\r\nTRF/PDD '] || row['Demais Mens. (R$) TRF/PDD'],
+            updated_at: new Date().toISOString()
+          }));
+
+          setPendingData(mapped);
+          toast.success(`Planilha pronta! ${mapped.length} cursos detectados.`, { id: toastId });
+        } catch (innerErr) {
+          toast.error('Erro ao processar conteúdo da planilha.', { id: toastId });
         }
-
-        // Mapear dados
-        const mapped = data.map((row: any) => ({
-          marca: row['Marca'],
-          unidade: row['Unidade'],
-          curso: row['Curso'],
-          semestres: row['Semestres'],
-          turno: row['Turno'],
-          mensalidade_bruta: row[' Mensalidade\r\ndia 30 (R$) '] || row['Mensalidade dia 30 (R$)'],
-          desc_percentual_ves_ene: row['Desc. %\r\nVES/ENE'] || row['Desc. % VES/ENE'],
-          mensalidade_ves_ene: row[' Demais Mens. (R$)\r\nVES/ENE '] || row['Demais Mens. (R$) VES/ENE'],
-          desc_percentual_trf_pdd: row['Desc.%\r\nTRF/PDD'] || row['Desc.% TRF/PDD'],
-          mensalidade_trf_pdd: row[' Demais Mens. (R$)\r\nTRF/PDD '] || row['Demais Mens. (R$) TRF/PDD'],
-          updated_at: new Date().toISOString()
-        }));
-
-        setPendingData(mapped);
-        toast.success(`Planilha pronta! ${mapped.length} cursos detectados.`, { id: toastId });
+      };
+      reader.onerror = () => {
+        toast.error('Erro na leitura do arquivo.', { id: toastId });
       };
       reader.readAsBinaryString(file);
     } catch (err) {
-      toast.error('Erro ao ler arquivo.', { id: toastId });
+      toast.error('Erro ao abrir arquivo.', { id: toastId });
     }
   };
 
@@ -143,9 +150,10 @@ export default function Admin() {
       toast.success(`Sucesso! ${pendingData.length} cursos atualizados.`, { id: toastId });
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao atualizar banco de dados.', { id: toastId });
+      toast.error('Erro ao atualizar banco de dados.');
     } finally {
       setIsImporting(false);
+      toast.dismiss(toastId);
     }
   };
 
@@ -254,24 +262,24 @@ export default function Admin() {
             </div>
             <h2 className="text-[24px] font-black text-navy-900 mb-3 uppercase tracking-tight">Atualização de Preços Mensal</h2>
             <p className="text-[15px] text-navy-500 mb-10 leading-relaxed font-medium">
-              Suba a planilha oficial do mês para atualizar automaticamente os valores de mensalidade da UNINASSAU Olinda.
+              Suba a planilha oficial do mês para atualizar os valores de mensalidade.
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full mb-10">
-              <div className="p-5 bg-white border border-slate-100 rounded-2xl shadow-sm text-left">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full mb-10 text-left">
+              <div className="p-5 bg-white border border-slate-100 rounded-2xl shadow-sm">
                 <div className="flex items-center gap-3 mb-2 text-navy-900 font-bold text-[14px]">
-                  <Check size={18} className="text-brand-blue" /> Colunas Aceitas
+                  <Check size={18} className="text-emerald-500" /> Colunas Necessárias
                 </div>
                 <p className="text-[12px] text-slate-500 font-medium">
                   Marca, Unidade, Curso, Turno, Mensalidade dia 30, Desc. % VES/ENE, Desc.% TRF/PDD.
                 </p>
               </div>
-              <div className="p-5 bg-white border border-slate-100 rounded-2xl shadow-sm text-left">
+              <div className="p-5 bg-white border border-slate-100 rounded-2xl shadow-sm">
                 <div className="flex items-center gap-3 mb-2 text-navy-900 font-bold text-[14px]">
-                  <AlertCircle size={18} className="text-amber-500" /> Formato do Arquivo
+                  <AlertCircle size={18} className="text-amber-500" /> Processo de Segurança
                 </div>
                 <p className="text-[12px] text-slate-500 font-medium">
-                  Apenas <strong>.XLSX</strong> ou <strong>.XLS</strong>. O sistema faz a limpeza total antes de inserir.
+                  Selecione o arquivo primeiro e depois confirme o envio. Os dados antigos serão removidos.
                 </p>
               </div>
             </div>
@@ -280,42 +288,42 @@ export default function Admin() {
               {!pendingData ? (
                 <label className="relative cursor-pointer group w-full">
                   <input type="file" className="hidden" accept=".xlsx, .xls" onChange={handleFileSelect} />
-                  <div className="flex items-center justify-center gap-3 px-10 py-5 rounded-2xl font-black text-[16px] transition-all shadow-xl bg-white border-2 border-dashed border-navy-200 text-navy-600 hover:border-navy-900 hover:text-navy-900">
+                  <div className="flex items-center justify-center gap-3 px-10 py-6 rounded-2xl font-black text-[16px] transition-all shadow-xl bg-white border-2 border-dashed border-navy-200 text-navy-600 hover:border-navy-900 hover:text-navy-900">
                     <Upload size={24} />
                     SELECIONAR ARQUIVO EXCEL
                   </div>
                 </label>
               ) : (
                 <div className="w-full space-y-4 animate-fade-in">
-                  <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-between">
+                  <div className="p-5 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-between">
                     <div className="flex items-center gap-3 text-blue-900 font-bold text-[14px]">
-                      <FileText size={20} />
-                      {pendingData.length} cursos detectados na planilha
+                      <FileText size={20} className="text-blue-600" />
+                      {pendingData.length} cursos encontrados. Pronto para enviar?
                     </div>
-                    <button onClick={() => setPendingData(null)} className="text-blue-500 hover:text-blue-700">
-                      <X size={18} />
+                    <button onClick={() => setPendingData(null)} className="text-blue-400 hover:text-red-500 transition-colors">
+                      <X size={20} />
                     </button>
                   </div>
                   
                   <Button 
                     onClick={handleConfirmImport} 
                     isLoading={isImporting} 
-                    className="w-full h-16 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[18px] shadow-2xl"
+                    className="w-full h-16 bg-navy-900 hover:bg-black text-white font-black text-[18px] shadow-2xl rounded-2xl"
                   >
                     {!isImporting && <Save size={24} className="mr-2" />}
                     ENVIAR E ATUALIZAR PLANILHA AGORA
                   </Button>
                   
-                  <p className="text-[11px] text-red-500 font-bold uppercase tracking-widest">
-                    ⚠️ Atenção: Ao clicar, os preços antigos serão apagados.
+                  <p className="text-[11px] text-red-500 font-bold uppercase tracking-widest bg-red-50 py-2 rounded-lg border border-red-100">
+                    ⚠️ Atenção: Os preços atuais serão substituídos permanentemente.
                   </p>
                 </div>
               )}
             </div>
 
             {importStats && (
-              <div className="mt-8 text-[14px] font-bold text-emerald-600 bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100 animate-bounce">
-                ✓ {importStats.success} registros processados!
+              <div className="mt-8 text-[14px] font-bold text-emerald-600 bg-emerald-50 px-5 py-3 rounded-full border border-emerald-100 animate-bounce">
+                ✓ {importStats.success} cursos atualizados no sistema!
               </div>
             )}
           </div>
