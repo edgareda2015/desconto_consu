@@ -110,14 +110,23 @@ export default function Admin() {
           updated_at: new Date().toISOString()
         }));
 
-        const { error: upsertError } = await supabase
+        // 1. Limpar a tabela antes de inserir os novos (Refresh Total)
+        const { error: deleteError } = await supabase
           .from('cursos_precos')
-          .upsert(cursosToUpsert, { onConflict: 'unidade,curso,turno' });
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000'); // Deleta tudo
 
-        if (upsertError) throw upsertError;
+        if (deleteError) throw deleteError;
+
+        // 2. Inserir os novos dados
+        const { error: insertError } = await supabase
+          .from('cursos_precos')
+          .insert(cursosToUpsert);
+
+        if (insertError) throw insertError;
 
         setImportStats({ total: data.length, success: data.length });
-        toast.success(`${data.length} cursos atualizados com sucesso!`, { id: toastId });
+        toast.success(`${data.length} cursos importados com sucesso!`, { id: toastId });
         setIsImporting(false);
       };
       reader.readAsBinaryString(file);
