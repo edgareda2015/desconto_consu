@@ -42,13 +42,13 @@ export function QuickGuide({ title, steps, icon, storageKey }: QuickGuideProps) 
 
   return (
     <>
-      <div className="bg-gradient-to-r from-navy-50 to-white border border-navy-100 rounded-2xl p-5 mb-8 shadow-sm relative animate-fade-in group">
+      <div className="bg-gradient-to-r from-navy-50 to-white border border-navy-100 rounded-2xl p-5 mb-8 shadow-sm relative animate-fade-in">
         <button 
           onClick={handleCloseClick}
-          className="absolute top-3 right-3 p-1.5 rounded-lg text-navy-300 hover:text-navy-600 hover:bg-navy-100 transition-all opacity-0 group-hover:opacity-100"
-          title="Fechar guia"
+          className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-navy-400 hover:text-navy-700 hover:bg-navy-100 transition-all border border-navy-100 bg-white/50"
         >
-          <X size={16} />
+          <span className="text-[11px] font-bold uppercase tracking-tight">Fechar instruções</span>
+          <X size={14} strokeWidth={3} />
         </button>
 
         <div className="flex items-start gap-4">
