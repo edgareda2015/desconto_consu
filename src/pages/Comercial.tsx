@@ -34,8 +34,9 @@ export default function Comercial() {
     curso: '',
     turno: '',
     modalidade: 'VES/ENE',
-    mensalidade_atual: '', // Aqui vamos mostrar o VALOR CHEIO
-    desc_percentual_atual: '', // Aqui a porcentagem da modalidade
+    mensalidade_atual: '', // VALOR LÍQUIDO (Cheio - Desc Atual)
+    mensalidade_bruta: '', // VALOR CHEIO (Bruto)
+    desc_percentual_atual: '',
     mensalidade_solicitada: '',
     desc_percentual_solicitado: '',
     unidade: 'OLINDA',
@@ -94,32 +95,33 @@ export default function Comercial() {
 
       if (matching && cursoSel && turnoSel) {
         const isVes = modalidadeSel === 'VES/ENE';
+        const cheia = parseFloat(matching.mensalidade_bruta);
+        const descAtual = isVes ? matching.desc_percentual_ves_ene : matching.desc_percentual_trf_pdd;
         
-        // Mensalidade Atual = VALOR CHEIO (Bruto)
-        updatedFormData.mensalidade_atual = matching.mensalidade_bruta.toString();
+        // Mensalidade Atual = VALOR LÍQUIDO (Cheio - Porcentagem)
+        const liquida = cheia * (1 - descAtual);
         
-        // Desc. Atual = Porcentagem da modalidade sobre o valor cheio
-        updatedFormData.desc_percentual_atual = isVes 
-          ? (matching.desc_percentual_ves_ene * 100).toFixed(0) 
-          : (matching.desc_percentual_trf_pdd * 100).toFixed(0);
+        updatedFormData.mensalidade_bruta = cheia.toString();
+        updatedFormData.mensalidade_atual = liquida.toString();
+        updatedFormData.desc_percentual_atual = (descAtual * 100).toFixed(0);
         
-        // Recalcula a solicitada se já houver um desconto digitado
+        // Se já houver um desconto solicitado, recalcula a solicitada com a bruta do turno
         if (updatedFormData.desc_percentual_solicitado) {
-          const descPercent = parseFloat(updatedFormData.desc_percentual_solicitado);
-          const cheia = parseFloat(updatedFormData.mensalidade_atual);
-          if (!isNaN(descPercent) && !isNaN(cheia)) {
-            updatedFormData.mensalidade_solicitada = (cheia * (1 - descPercent / 100)).toFixed(2);
+          const dSolicitado = parseFloat(updatedFormData.desc_percentual_solicitado);
+          if (!isNaN(dSolicitado)) {
+            updatedFormData.mensalidade_solicitada = (cheia * (1 - dSolicitado / 100)).toFixed(2);
           }
         }
       } else {
         updatedFormData.mensalidade_atual = '';
+        updatedFormData.mensalidade_bruta = '';
         updatedFormData.desc_percentual_atual = '';
       }
       
       setFormData(updatedFormData);
     } else if (name === 'desc_percentual_solicitado') {
       const descPercent = parseFloat(value);
-      const cheia = parseFloat(formData.mensalidade_atual);
+      const cheia = parseFloat(formData.mensalidade_bruta);
       let solicitada = '';
 
       if (!isNaN(descPercent) && !isNaN(cheia)) {
@@ -167,7 +169,7 @@ export default function Comercial() {
       setEditingId(null);
       setFormData({ 
         nome: '', inscricao: '', cpf: '', curso: '', turno: '', modalidade: 'VES/ENE',
-        mensalidade_atual: '', desc_percentual_atual: '', 
+        mensalidade_atual: '', mensalidade_bruta: '', desc_percentual_atual: '', 
         mensalidade_solicitada: '', desc_percentual_solicitado: '', 
         unidade: 'OLINDA', regional: 'Regional A' 
       });
@@ -191,6 +193,7 @@ export default function Comercial() {
       turno: req.turno || '',
       modalidade: req.modalidade || 'VES/ENE',
       mensalidade_atual: req.mensalidade_atual?.toString() || '',
+      mensalidade_bruta: req.mensalidade_bruta?.toString() || '',
       desc_percentual_atual: req.desc_percentual_atual?.toString() || '',
       mensalidade_solicitada: req.mensalidade_solicitada?.toString() || '',
       desc_percentual_solicitado: req.desc_percentual_solicitado?.toString() || '',
@@ -267,7 +270,7 @@ export default function Comercial() {
               />
               <div className="grid grid-cols-2 gap-4">
                 <Select label="Turno" required name="turno" value={formData.turno} onChange={handleInputChange} options={turnosDisponiveis} disabled={!formData.curso} />
-                <Select label="Modalidade Ingresso" required name="modalidade" value={formData.modalidade} onChange={handleInputChange} options={[{value:'VES/ENE', label:'VES/ENE'}, {value:'TRF/PDD', label:'TRF/PDD'}]} />
+                <Select label="Tipo Ingresso" required name="modalidade" value={formData.modalidade} onChange={handleInputChange} options={[{value:'VES/ENE', label:'VES/ENE'}, {value:'TRF/PDD', label:'TRF/PDD'}]} />
               </div>
             </div>
 
@@ -275,7 +278,7 @@ export default function Comercial() {
               <h4 className="text-[14px] font-bold text-navy-900 border-l-4 border-brand-blue pl-3">Localização e Mensalidades</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[12px] font-bold text-navy-700 mb-1.5">Mensalidade Bruta (Valor Cheio)</label>
+                  <label className="block text-[12px] font-bold text-navy-700 mb-1.5">Mensalidade Atual (Cheio - Desc)</label>
                   <div className="h-[42px] px-3 flex items-center bg-slate-50 border border-slate-200 rounded-lg text-[14px] font-bold text-navy-900">
                     {formatCurrency(formData.mensalidade_atual)}
                   </div>
