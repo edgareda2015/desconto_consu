@@ -168,6 +168,32 @@ export default function Coordenador() {
         description="Analise os pareceres recebidos e tome a decisão final para o fluxo de descontos."
       />
 
+      {/* Guia de Instruções para o Coordenador */}
+      <div className="bg-gradient-to-r from-navy-50 to-white border border-navy-100 rounded-2xl p-5 mb-8 shadow-sm">
+        <div className="flex items-start gap-4">
+          <div className="bg-brand-blue/10 p-2.5 rounded-xl">
+            <Ticket className="text-brand-blue" size={24} />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-navy-900 font-bold text-[15px] mb-2">Instruções da Coordenação</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex gap-2.5">
+                <span className="flex items-center justify-center h-5 w-5 rounded-full bg-brand-blue text-white text-[11px] font-bold shrink-0 mt-0.5">1</span>
+                <p className="text-[12px] text-navy-600 leading-snug">Clique em <strong>"Ver PDF"</strong> para analisar o parecer técnico enviado pelo professor.</p>
+              </div>
+              <div className="flex gap-2.5">
+                <span className="flex items-center justify-center h-5 w-5 rounded-full bg-brand-blue text-white text-[11px] font-bold shrink-0 mt-0.5">2</span>
+                <p className="text-[12px] text-navy-600 leading-snug">Use <strong>"Abrir Chamado"</strong> para inserir o número do ticket e autorizar o processo.</p>
+              </div>
+              <div className="flex gap-2.5">
+                <span className="flex items-center justify-center h-5 w-5 rounded-full bg-brand-blue text-white text-[11px] font-bold shrink-0 mt-0.5">3</span>
+                <p className="text-[12px] text-navy-600 leading-snug">Após o chamado, decida pelo <strong>Deferimento</strong> ou <strong>Indeferimento</strong> final da solicitação.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <Table>
         <Thead>
           <Tr>
