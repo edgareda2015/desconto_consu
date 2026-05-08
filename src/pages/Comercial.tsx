@@ -10,7 +10,7 @@ import { Table, Thead, Tbody, Tr, Th, Td } from '../components/ui/Table';
 import { EmptyState } from '../components/ui/EmptyState';
 import { TableSkeleton } from '../components/ui/Skeleton';
 import { PageHeader } from '../components/ui/PageHeader';
-import { Plus, FileText, Search, GraduationCap, AlertCircle, HelpCircle } from 'lucide-react';
+import { Plus, FileText, Search, Hash, MapPin, Building2, GraduationCap, AlertCircle, HelpCircle } from 'lucide-react';
 import { QuickGuide } from '../components/ui/QuickGuide';
 import toast from 'react-hot-toast';
 
@@ -34,8 +34,8 @@ export default function Comercial() {
     curso: '',
     turno: '',
     modalidade: 'VES/ENE',
-    mensalidade_atual: '', // VALOR LÍQUIDO (Cheio - Desc Atual)
-    mensalidade_bruta: '', // VALOR CHEIO (Bruto)
+    mensalidade_atual: '',
+    mensalidade_bruta: '',
     desc_percentual_atual: '',
     mensalidade_solicitada: '',
     desc_percentual_solicitado: '',
@@ -69,12 +69,6 @@ export default function Comercial() {
     }
   };
 
-  const formatCurrency = (value: any) => {
-    const num = parseFloat(value);
-    if (isNaN(num)) return 'R$ 0,00';
-    return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  };
-
   const turnosDisponiveis = formData.curso 
     ? Array.from(new Set(cursosPrecos.filter(c => c.curso === formData.curso).map(c => c.turno))).map(t => ({ value: t, label: t }))
     : [];
@@ -98,41 +92,30 @@ export default function Comercial() {
         const cheia = parseFloat(matching.mensalidade_bruta);
         const descAtual = isVes ? matching.desc_percentual_ves_ene : matching.desc_percentual_trf_pdd;
         
-        // Mensalidade Atual = VALOR LÍQUIDO (Cheio - Porcentagem)
+        // Mensalidade Atual = VALOR LÍQUIDO (Cheio - Desc)
         const liquida = cheia * (1 - descAtual);
         
         updatedFormData.mensalidade_bruta = cheia.toString();
-        updatedFormData.mensalidade_atual = liquida.toString();
+        updatedFormData.mensalidade_atual = liquida.toFixed(2);
         updatedFormData.desc_percentual_atual = (descAtual * 100).toFixed(0);
         
-        // Se já houver um desconto solicitado, recalcula a solicitada com a bruta do turno
+        // Recalcula solicitada se houver desconto
         if (updatedFormData.desc_percentual_solicitado) {
           const dSolicitado = parseFloat(updatedFormData.desc_percentual_solicitado);
           if (!isNaN(dSolicitado)) {
             updatedFormData.mensalidade_solicitada = (cheia * (1 - dSolicitado / 100)).toFixed(2);
           }
         }
-      } else {
-        updatedFormData.mensalidade_atual = '';
-        updatedFormData.mensalidade_bruta = '';
-        updatedFormData.desc_percentual_atual = '';
       }
-      
       setFormData(updatedFormData);
     } else if (name === 'desc_percentual_solicitado') {
       const descPercent = parseFloat(value);
       const cheia = parseFloat(formData.mensalidade_bruta);
       let solicitada = '';
-
       if (!isNaN(descPercent) && !isNaN(cheia)) {
         solicitada = (cheia * (1 - descPercent / 100)).toFixed(2);
       }
-
-      setFormData(prev => ({ 
-        ...prev, 
-        [name]: value,
-        mensalidade_solicitada: solicitada
-      }));
+      setFormData(prev => ({ ...prev, [name]: value, mensalidade_solicitada: solicitada }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
@@ -144,7 +127,6 @@ export default function Comercial() {
     try {
       const selectedUnit = units.find(u => u.name === formData.unidade);
       const selectedReg = regionals.find(r => r.name === formData.regional);
-
       const payload = {
         ...formData,
         mensalidade_atual: parseFloat(formData.mensalidade_atual) || 0,
@@ -158,11 +140,9 @@ export default function Comercial() {
         status: 'Aguardando análise',
         reprocessada: !!editingId
       };
-
       const { error } = editingId 
         ? await supabase.from('solicitacoes').update(payload).eq('id', editingId)
         : await supabase.from('solicitacoes').insert([payload]);
-
       if (error) throw error;
       toast.success(editingId ? 'Atualizado!' : 'Criado!');
       setIsModalOpen(false);
@@ -176,7 +156,6 @@ export default function Comercial() {
       fetchData();
     } catch (err) {
       toast.error('Erro ao salvar');
-      console.error(err);
     } finally {
       setSubmitting(false);
     }
@@ -221,7 +200,7 @@ export default function Comercial() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
         <input 
           type="text" placeholder="Buscar..."
-          className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-blue/20 outline-none"
+          className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg outline-none"
           value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
@@ -237,14 +216,10 @@ export default function Comercial() {
           {loading ? <Tr><Td colSpan={9}><TableSkeleton rows={5} cols={9} /></Td></Tr> : 
             filteredData.map((req) => (
               <Tr key={req.id} className={getRowColorClass(req.status, req.reprocessada)}>
-                <Td>{req.inscricao}</Td>
-                <Td className="font-bold">{req.nome}</Td>
-                <Td>{req.curso}</Td>
-                <Td>{formatCurrency(req.mensalidade_atual)}</Td>
-                <Td align="center">{req.desc_percentual_atual}%</Td>
-                <Td className="font-bold text-brand-blue">{formatCurrency(req.mensalidade_solicitada)}</Td>
-                <Td align="center">{req.desc_percentual_solicitado}%</Td>
-                <Td><StatusBadge status={req.status} /></Td>
+                <Td>{req.inscricao}</Td><Td className="font-bold">{req.nome}</Td><Td>{req.curso}</Td>
+                <Td>R$ {parseFloat(req.mensalidade_atual).toFixed(2)}</Td><Td align="center">{req.desc_percentual_atual}%</Td>
+                <Td className="font-bold text-brand-blue">R$ {parseFloat(req.mensalidade_solicitada).toFixed(2)}</Td>
+                <Td align="center">{req.desc_percentual_solicitado}%</Td><Td><StatusBadge status={req.status} /></Td>
                 <Td align="right">
                   {req.status === 'Indeferido' && <Button size="sm" variant="outline" onClick={() => handleEdit(req)}>Editar</Button>}
                 </Td>
@@ -254,15 +229,15 @@ export default function Comercial() {
         </Tbody>
       </Table>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? "Editar" : "Nova Solicitação"} size="xl">
-        <form onSubmit={handleSubmit} className="space-y-6">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? "Editar Solicitação" : "Nova Solicitação de Desconto"} size="xl">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
-              <h4 className="text-[14px] font-bold text-navy-900 border-l-4 border-brand-red pl-3">Aluno</h4>
+              <h4 className="text-[14px] font-bold text-navy-900 border-l-4 border-brand-red pl-3">Dados do Aluno</h4>
               <Input label="Nome Completo" required name="nome" value={formData.nome} onChange={handleInputChange} />
               <div className="grid grid-cols-2 gap-4">
                 <Input label="Inscrição" required name="inscricao" value={formData.inscricao} onChange={handleInputChange} />
-                <Input label="CPF" required name="cpf" value={formData.cpf} onChange={handleInputChange} />
+                <Input label="CPF/Matricula" required name="cpf" value={formData.cpf} onChange={handleInputChange} />
               </div>
               <Select 
                 label="Curso" required name="curso" value={formData.curso} onChange={handleInputChange} 
@@ -270,35 +245,19 @@ export default function Comercial() {
               />
               <div className="grid grid-cols-2 gap-4">
                 <Select label="Turno" required name="turno" value={formData.turno} onChange={handleInputChange} options={turnosDisponiveis} disabled={!formData.curso} />
-                <Select label="Tipo Ingresso" required name="modalidade" value={formData.modalidade} onChange={handleInputChange} options={[{value:'VES/ENE', label:'VES/ENE'}, {value:'TRF/PDD', label:'TRF/PDD'}]} />
+                <Select label="Modalidade Ingresso" required name="modalidade" value={formData.modalidade} onChange={handleInputChange} options={[{value:'VES/ENE', label:'VES/ENE'}, {value:'TRF/PDD', label:'TRF/PDD'}]} />
               </div>
             </div>
 
             <div className="space-y-4">
               <h4 className="text-[14px] font-bold text-navy-900 border-l-4 border-brand-blue pl-3">Localização e Mensalidades</h4>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[12px] font-bold text-navy-700 mb-1.5">Mensalidade Atual (Cheio - Desc)</label>
-                  <div className="h-[42px] px-3 flex items-center bg-slate-50 border border-slate-200 rounded-lg text-[14px] font-bold text-navy-900">
-                    {formatCurrency(formData.mensalidade_atual)}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[12px] font-bold text-navy-700 mb-1.5">Desc. % Atual</label>
-                  <div className="h-[42px] px-3 flex items-center bg-slate-50 border border-slate-200 rounded-lg text-[14px] font-bold text-navy-900">
-                    {formData.desc_percentual_atual || 0}%
-                  </div>
-                </div>
+                <Input label="Mensalidade Atual" name="mensalidade_atual" value={formData.mensalidade_atual} readOnly className="bg-slate-50" />
+                <Input label="Desc. % Atual" name="desc_percentual_atual" value={formData.desc_percentual_atual} readOnly className="bg-slate-50" />
               </div>
-
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
-                <Input label="Desc. % Solicitado" required type="number" name="desc_percentual_solicitado" value={formData.desc_percentual_solicitado} onChange={handleInputChange} placeholder="Ex: 65" />
-                <div>
-                  <label className="block text-[12px] font-bold text-brand-blue mb-1">Mensalidade Solicitada</label>
-                  <div className="h-[42px] px-3 flex items-center bg-emerald-50 border border-emerald-200 rounded-lg text-[14px] font-bold text-emerald-700">
-                    {formatCurrency(formData.mensalidade_solicitada)}
-                  </div>
-                </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="Mensalidade Solicitada" name="mensalidade_solicitada" value={formData.mensalidade_solicitada} readOnly className="bg-emerald-50 text-emerald-700 font-bold" />
+                <Input label="Desc. % Solicitado" required type="number" name="desc_percentual_solicitado" value={formData.desc_percentual_solicitado} onChange={handleInputChange} placeholder="%" />
               </div>
             </div>
           </div>
