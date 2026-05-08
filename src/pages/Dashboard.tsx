@@ -173,28 +173,28 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
           title="Total de Solicitações" 
-          value={stats.totalRequests} 
+          value={stats?.totalRequests || 0} 
           icon={<Activity />} 
           trend="Geral" 
           color="navy"
         />
         <StatCard 
           title="Total no Mês" 
-          value={stats.monthlyRequests} 
+          value={stats?.monthlyRequests || 0} 
           icon={<FileText />} 
           trend="+12%" 
           color="blue"
         />
         <StatCard 
           title="Total de Descontos" 
-          value={`R$ ${stats.totalDiscountValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
+          value={`R$ ${(stats?.totalDiscountValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
           icon={<DollarSign />} 
           trend="+R$ 2.4k" 
           color="emerald"
         />
         <StatCard 
           title="Taxa de Conclusão" 
-          value={stats.totalRequests > 0 ? `${((stats.approvedCount / stats.totalRequests) * 100).toFixed(1)}%` : '0%'} 
+          value={stats?.totalRequests > 0 ? `${((stats.approvedCount / stats.totalRequests) * 100).toFixed(1)}%` : '0%'} 
           icon={<Award />} 
           trend="Estável" 
           color="amber"
@@ -215,7 +215,7 @@ export default function Dashboard() {
           </div>
           <div className="flex-1 w-full -ml-6">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats.historyData}>
+              <AreaChart data={stats?.historyData || []}>
                 <defs>
                   <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#1e293b" stopOpacity={0.1}/>
@@ -257,7 +257,7 @@ export default function Dashboard() {
             <p className="text-[12px] text-slate-500 font-medium">Desempenho por volume de entrada</p>
           </div>
           <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
-            {stats.consultantData.map((item: any, index: number) => (
+            {(stats?.consultantData || []).map((item: any, index: number) => (
               <div key={item.name} className="flex flex-col gap-1.5">
                 <div className="flex justify-between items-center text-[13px]">
                   <span className="font-bold text-navy-800">{item.name}</span>
@@ -266,12 +266,12 @@ export default function Dashboard() {
                 <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-navy-600 rounded-full transition-all duration-1000"
-                    style={{ width: `${(item.value / stats.consultantData[0].value) * 100}%` }}
+                    style={{ width: `${(item.value / (stats.consultantData[0]?.value || 1)) * 100}%` }}
                   />
                 </div>
               </div>
             ))}
-            {stats.consultantData.length === 0 && <p className="text-center text-slate-400 py-10">Sem dados.</p>}
+            {(!stats?.consultantData || stats.consultantData.length === 0) && <p className="text-center text-slate-400 py-10">Sem dados.</p>}
           </div>
         </Card>
       </div>
@@ -288,7 +288,7 @@ export default function Dashboard() {
           </div>
           <div className="flex-1 w-full -ml-4">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.courseDataQuantity} layout="vertical" margin={{ right: 40 }}>
+              <BarChart data={stats?.courseDataQuantity || []} layout="vertical" margin={{ right: 40 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
                 <XAxis type="number" hide />
                 <YAxis 
@@ -304,7 +304,7 @@ export default function Dashboard() {
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                 />
                 <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={24} name="Solicitações">
-                  {stats.courseDataQuantity.map((_: any, index: number) => (
+                  {(stats?.courseDataQuantity || []).map((_: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#1e293b' : '#3b82f6'} />
                   ))}
                   <LabelList dataKey="value" position="right" style={{ fontSize: 11, fontWeight: 'bold', fill: '#1e293b' }} />
@@ -325,7 +325,7 @@ export default function Dashboard() {
           </div>
           <div className="flex-1 w-full -ml-4">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.courseDataValue} layout="vertical" margin={{ right: 80 }}>
+              <BarChart data={stats?.courseDataValue || []} layout="vertical" margin={{ right: 80 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
                 <XAxis type="number" hide />
                 <YAxis 
@@ -342,7 +342,7 @@ export default function Dashboard() {
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                 />
                 <Bar dataKey="totalValue" radius={[0, 6, 6, 0]} barSize={24} name="Valor Desconto">
-                  {stats.courseDataValue.map((_: any, index: number) => (
+                  {(stats?.courseDataValue || []).map((_: any, index: number) => (
                     <Cell key={`cell-${index}`} fill="#10b981" />
                   ))}
                   <LabelList 
@@ -374,8 +374,8 @@ export default function Dashboard() {
                 <PieChart>
                   <Pie
                     data={[
-                      { name: 'Aguardando', value: stats.totalRequests - stats.approvedCount },
-                      { name: 'Concluído', value: stats.approvedCount }
+                      { name: 'Aguardando', value: (stats?.totalRequests || 0) - (stats?.approvedCount || 0) },
+                      { name: 'Concluído', value: stats?.approvedCount || 0 }
                     ]}
                     innerRadius={80}
                     outerRadius={110}
@@ -389,13 +389,13 @@ export default function Dashboard() {
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                <p className="text-3xl font-black text-navy-900 leading-none">{stats.totalRequests}</p>
+                <p className="text-3xl font-black text-navy-900 leading-none">{stats?.totalRequests || 0}</p>
                 <p className="text-[11px] font-bold text-slate-400 uppercase mt-1">Total</p>
               </div>
             </div>
             <div className="flex flex-col gap-4 w-full sm:w-48">
-              <LegendItem color="bg-navy-900" label="Finalizados/Lib." value={stats.approvedCount} />
-              <LegendItem color="bg-slate-300" label="Em Processamento" value={stats.totalRequests - stats.approvedCount} />
+              <LegendItem color="bg-navy-900" label="Finalizados/Lib." value={stats?.approvedCount || 0} />
+              <LegendItem color="bg-slate-300" label="Em Processamento" value={(stats?.totalRequests || 0) - (stats?.approvedCount || 0)} />
             </div>
           </div>
         </Card>
