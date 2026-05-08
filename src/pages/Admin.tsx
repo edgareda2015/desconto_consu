@@ -93,6 +93,22 @@ export default function Admin() {
             return;
           }
 
+          // Função para limpar números (remove R$, pontos de milhar e converte vírgula para ponto)
+          const cleanNumber = (val: any) => {
+            if (typeof val === 'number') return val;
+            if (!val) return 0;
+            // Converte para string e remove tudo que não é número, vírgula ou ponto
+            let str = val.toString().replace(/R\$\s?/, '').trim();
+            // Se tiver ponto e vírgula (ex: 1.200,00), remove o ponto e troca a vírgula
+            if (str.includes('.') && str.includes(',')) {
+              str = str.replace(/\./g, '').replace(',', '.');
+            } else {
+              // Se tiver só vírgula, troca por ponto
+              str = str.replace(',', '.');
+            }
+            return parseFloat(str) || 0;
+          };
+
           // Mapear dados
           const mapped = data.map((row: any) => ({
             marca: row['Marca'],
@@ -100,17 +116,18 @@ export default function Admin() {
             curso: row['Curso'],
             semestres: row['Semestres'],
             turno: row['Turno'],
-            mensalidade_bruta: row[' Mensalidade\r\ndia 30 (R$) '] || row['Mensalidade dia 30 (R$)'],
-            desc_percentual_ves_ene: row['Desc. %\r\nVES/ENE'] || row['Desc. % VES/ENE'],
-            mensalidade_ves_ene: row[' Demais Mens. (R$)\r\nVES/ENE '] || row['Demais Mens. (R$) VES/ENE'],
-            desc_percentual_trf_pdd: row['Desc.%\r\nTRF/PDD'] || row['Desc.% TRF/PDD'],
-            mensalidade_trf_pdd: row[' Demais Mens. (R$)\r\nTRF/PDD '] || row['Demais Mens. (R$) TRF/PDD'],
+            mensalidade_bruta: cleanNumber(row[' Mensalidade\r\ndia 30 (R$) '] || row['Mensalidade dia 30 (R$)']),
+            desc_percentual_ves_ene: cleanNumber(row['Desc. %\r\nVES/ENE'] || row['Desc. % VES/ENE']),
+            mensalidade_ves_ene: cleanNumber(row[' Demais Mens. (R$)\r\nVES/ENE '] || row['Demais Mens. (R$) VES/ENE']),
+            desc_percentual_trf_pdd: cleanNumber(row['Desc.%\r\nTRF/PDD'] || row['Desc.% TRF/PDD']),
+            mensalidade_trf_pdd: cleanNumber(row[' Demais Mens. (R$)\r\nTRF/PDD '] || row['Demais Mens. (R$) TRF/PDD']),
             updated_at: new Date().toISOString()
           }));
 
           setPendingData(mapped);
           toast.success(`Planilha pronta! ${mapped.length} cursos detectados.`, { id: toastId });
         } catch (innerErr) {
+          console.error('Erro ao processar planilha:', innerErr);
           toast.error('Erro ao processar conteúdo da planilha.', { id: toastId });
         }
       };
@@ -136,24 +153,29 @@ export default function Admin() {
         .delete()
         .neq('id', '00000000-0000-0000-0000-000000000000'); // Deleta tudo
 
-      if (deleteError) throw deleteError;
+      if (deleteError) {
+        console.error('Erro ao deletar:', deleteError);
+        throw new Error(`Erro ao limpar tabela: ${deleteError.message}`);
+      }
 
       // 2. Inserir os novos dados
       const { error: insertError } = await supabase
         .from('cursos_precos')
         .insert(pendingData);
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('Erro ao inserir:', insertError);
+        throw new Error(`Erro ao inserir dados: ${insertError.message}`);
+      }
 
       setImportStats({ total: pendingData.length, success: pendingData.length });
       setPendingData(null);
       toast.success(`Sucesso! ${pendingData.length} cursos atualizados.`, { id: toastId });
-    } catch (err) {
-      console.error(err);
-      toast.error('Erro ao atualizar banco de dados.');
+    } catch (err: any) {
+      console.error('Erro completo no banco:', err);
+      toast.error(err.message || 'Erro ao atualizar banco de dados.', { id: toastId });
     } finally {
       setIsImporting(false);
-      toast.dismiss(toastId);
     }
   };
 
