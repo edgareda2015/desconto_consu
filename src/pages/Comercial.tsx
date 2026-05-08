@@ -75,6 +75,16 @@ export default function Comercial() {
     ? Array.from(new Set(cursosPrecos.filter(c => c.curso === formData.curso).map(c => c.turno))).map(t => ({ value: t, label: t }))
     : [];
 
+  // Formata número como moeda brasileira
+  const formatCurrency = (value: number) => {
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  };
+
+  // Encontra o curso selecionado no banco
+  const getCursoAtual = (curso?: string, turno?: string) => {
+    return cursosPrecos.find(c => c.curso === (curso || formData.curso) && c.turno === (turno || formData.turno));
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
@@ -82,11 +92,13 @@ export default function Comercial() {
     if (name === 'curso' || name === 'turno' || name === 'modalidade') {
       const updatedFormData = { ...formData, [name]: value };
       
-      // Se trocou o curso, limpa o turno (pois os turnos podem ser diferentes)
+      // Se trocou o curso, limpa o turno e campos calculados
       if (name === 'curso') {
         updatedFormData.turno = '';
         updatedFormData.mensalidade_atual = '';
         updatedFormData.desc_percentual_atual = '';
+        updatedFormData.mensalidade_solicitada = '';
+        updatedFormData.desc_percentual_solicitado = '';
       }
 
       const cursoSel = name === 'curso' ? value : updatedFormData.curso;
@@ -97,13 +109,34 @@ export default function Comercial() {
 
       if (cursoEncontrado && cursoSel && turnoSel) {
         const isVes = modalidadeSel === 'VES/ENE';
-        updatedFormData.mensalidade_atual = parseFloat(cursoEncontrado.mensalidade_bruta).toFixed(2);
-        updatedFormData.desc_percentual_atual = isVes 
-          ? (parseFloat(cursoEncontrado.desc_percentual_ves_ene) * 100).toFixed(0) 
-          : (parseFloat(cursoEncontrado.desc_percentual_trf_pdd) * 100).toFixed(0);
+        const mensalidadeBruta = parseFloat(cursoEncontrado.mensalidade_bruta);
+        const descAtual = isVes 
+          ? parseFloat(cursoEncontrado.desc_percentual_ves_ene) * 100 
+          : parseFloat(cursoEncontrado.desc_percentual_trf_pdd) * 100;
+
+        updatedFormData.mensalidade_atual = mensalidadeBruta.toFixed(2);
+        updatedFormData.desc_percentual_atual = descAtual.toFixed(0);
+        // Limpa os campos solicitados para o comercial preencher
+        updatedFormData.mensalidade_solicitada = '';
+        updatedFormData.desc_percentual_solicitado = '';
       }
       
       setFormData(updatedFormData);
+    } else if (name === 'desc_percentual_solicitado') {
+      // Quando digitar o desconto solicitado, calcula a mensalidade solicitada
+      const descSolicitado = parseFloat(value);
+      const mensalidadeBruta = parseFloat(formData.mensalidade_atual);
+      let mensalidadeSolicitada = '';
+      
+      if (!isNaN(descSolicitado) && !isNaN(mensalidadeBruta) && descSolicitado > 0) {
+        mensalidadeSolicitada = (mensalidadeBruta * (1 - descSolicitado / 100)).toFixed(2);
+      }
+
+      setFormData(prev => ({ 
+        ...prev, 
+        desc_percentual_solicitado: value,
+        mensalidade_solicitada: mensalidadeSolicitada
+      }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
@@ -422,37 +455,26 @@ export default function Comercial() {
             <div className="space-y-4">
               <h4 className="text-[14px] font-bold text-navy-900 border-l-4 border-brand-blue pl-3">Localização e Mensalidades</h4>
               <div className="grid grid-cols-2 gap-4">
-                <Input 
-                  label="Mensalidade Atual" 
-                  type="number" 
-                  name="mensalidade_atual" 
-                  value={formData.mensalidade_atual} 
-                  onChange={handleInputChange} 
-                  placeholder="R$ 0,00"
-                  readOnly
-                  className="bg-slate-50 cursor-not-allowed"
-                />
-                <Input 
-                  label="Desc. % Atual" 
-                  required 
-                  type="number" 
-                  name="desc_percentual_atual" 
-                  value={formData.desc_percentual_atual} 
-                  onChange={handleInputChange} 
-                  placeholder="%"
-                  readOnly
-                  className="bg-slate-50 cursor-not-allowed"
-                />
+                <div>
+                  <label className="block text-[12px] font-bold text-navy-700 mb-1.5">Mensalidade Atual</label>
+                  <div className="h-[42px] px-3 flex items-center bg-slate-50 border border-slate-200 rounded-lg text-[14px] font-bold text-navy-900">
+                    {formData.mensalidade_atual ? formatCurrency(parseFloat(formData.mensalidade_atual)) : 'R$ 0,00'}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[12px] font-bold text-navy-700 mb-1.5">Desc. % Atual</label>
+                  <div className="h-[42px] px-3 flex items-center bg-slate-50 border border-slate-200 rounded-lg text-[14px] font-bold text-navy-900">
+                    {formData.desc_percentual_atual ? `${formData.desc_percentual_atual}%` : '0%'}
+                  </div>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <Input 
-                  label="Mensalidade Solicitada" 
-                  type="number" 
-                  name="mensalidade_solicitada" 
-                  value={formData.mensalidade_solicitada} 
-                  onChange={handleInputChange} 
-                  placeholder="R$ 0,00"
-                />
+                <div>
+                  <label className="block text-[12px] font-bold text-navy-700 mb-1.5">Mensalidade Solicitada</label>
+                  <div className="h-[42px] px-3 flex items-center bg-emerald-50 border border-emerald-200 rounded-lg text-[14px] font-bold text-emerald-700">
+                    {formData.mensalidade_solicitada ? formatCurrency(parseFloat(formData.mensalidade_solicitada)) : 'Informe o desconto →'}
+                  </div>
+                </div>
                 <Input 
                   label="Desc. % Solicitado" 
                   required 
@@ -460,7 +482,7 @@ export default function Comercial() {
                   name="desc_percentual_solicitado" 
                   value={formData.desc_percentual_solicitado} 
                   onChange={handleInputChange} 
-                  placeholder="%"
+                  placeholder="Ex: 65"
                 />
               </div>
             </div>
