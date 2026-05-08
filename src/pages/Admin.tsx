@@ -8,7 +8,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { TableSkeleton } from '../components/ui/Skeleton';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Input } from '../components/ui/Input';
-import { Save, Users, AlertCircle, Settings2, Check, X, Plus, UserPlus } from 'lucide-react';
+import { Save, Users, AlertCircle, Settings2, Check, X, Plus, UserPlus, Trash2, Edit2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Admin() {
@@ -18,7 +18,11 @@ export default function Admin() {
   const [courseSelectionUser, setCourseSelectionUser] = useState<any | null>(null);
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
   const [isNewUserModalOpen, setIsNewUserModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [submittingNew, setSubmittingNew] = useState(false);
+  const [submittingEdit, setSubmittingEdit] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<any | null>(null);
   
   const [newUser, setNewUser] = useState({
     nome: '',
@@ -107,13 +111,81 @@ export default function Admin() {
         .eq('id', id);
       
       if (error) throw error;
-      toast.success('Usuário atualizado com sucesso!');
+      toast.success('Usuário atualizado!');
       
       setUsuarios(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
     } catch(err) {
-      toast.error('Erro ao atualizar usuário.');
+      toast.error('Erro ao atualizar.');
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const handleEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+
+    setSubmittingEdit(true);
+    try {
+      // 1. Atualiza no Clerk se houver Clerk ID
+      if (editingUser.clerk_user_id) {
+        await supabase.functions.invoke('manage-clerk-user', {
+          body: { 
+            action: 'update', 
+            userId: editingUser.clerk_user_id,
+            userData: { nome: editingUser.nome }
+          }
+        });
+      }
+
+      // 2. Atualiza no Supabase
+      const { error } = await supabase
+        .from('usuarios_perfis')
+        .update({
+          nome: editingUser.nome,
+          email: editingUser.email,
+          clerk_user_id: editingUser.clerk_user_id
+        })
+        .eq('id', editingUser.id);
+      
+      if (error) throw error;
+
+      toast.success('Usuário editado com sucesso!');
+      setIsEditModalOpen(false);
+      fetchUsuarios();
+    } catch (err: any) {
+      toast.error('Erro ao editar usuário.');
+    } finally {
+      setSubmittingEdit(false);
+    }
+  };
+
+  const handleDeleteUser = async (id: string, clerkId?: string) => {
+    if (!confirm('Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.')) return;
+
+    setDeletingId(id);
+    try {
+      // 1. Deleta no Clerk via Edge Function
+      if (clerkId) {
+        await supabase.functions.invoke('manage-clerk-user', {
+          body: { action: 'delete', userId: clerkId }
+        });
+      }
+
+      // 2. Deleta no Supabase
+      const { error } = await supabase
+        .from('usuarios_perfis')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+
+      toast.success('Usuário removido com sucesso!');
+      setUsuarios(prev => prev.filter(u => u.id !== id));
+    } catch (err: any) {
+      toast.error('Erro ao excluir usuário.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -147,7 +219,7 @@ export default function Admin() {
             <Th>Usuário</Th>
             <Th>Perfil Atual</Th>
             <Th>Vínculo de Curso</Th>
-            <Th align="right">Status</Th>
+            <Th align="right">Ações</Th>
           </Tr>
         </Thead>
         <Tbody>
@@ -222,16 +294,30 @@ export default function Admin() {
                   )}
                 </Td>
                 <Td align="right">
-                  {updatingId === u.id ? (
-                    <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-navy-400">
-                      <div className="h-3 w-3 animate-spin rounded-full border-2 border-navy-200 border-t-navy-500" />
-                      Salvando
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-brand-green bg-green-50 px-2.5 py-1 rounded-full">
-                      <Save size={14} /> Salvo
-                    </span>
-                  )}
+                  <div className="flex justify-end gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 w-8 p-0 text-navy-400 hover:text-navy-600 hover:bg-navy-50"
+                      onClick={() => { setEditingUser(u); setIsEditModalOpen(true); }}
+                      disabled={updatingId === u.id || deletingId === u.id}
+                    >
+                      <Edit2 size={14} />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 w-8 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
+                      onClick={() => handleDeleteUser(u.id, u.clerk_user_id)}
+                      disabled={updatingId === u.id || deletingId === u.id}
+                    >
+                      {deletingId === u.id ? (
+                        <div className="h-3 w-3 animate-spin rounded-full border-2 border-red-200 border-t-red-500" />
+                      ) : (
+                        <Trash2 size={14} />
+                      )}
+                    </Button>
+                  </div>
                 </Td>
               </Tr>
             ))
@@ -342,6 +428,45 @@ export default function Admin() {
             </Button>
             <Button variant="primary" type="submit" className="flex-1 bg-navy-900" isLoading={submittingNew}>
               Cadastrar
+            </Button>
+          </div>
+        </form>
+      </Modal>
+      {/* Modal Editar Usuário */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => !submittingEdit && setIsEditModalOpen(false)}
+        title="Editar Usuário"
+        description="Atualize as informações cadastrais do usuário."
+      >
+        <form onSubmit={handleEditUser} className="space-y-4 mt-2">
+          <Input 
+            label="Nome Completo"
+            required
+            value={editingUser?.nome || ''}
+            onChange={(e) => setEditingUser({...editingUser, nome: e.target.value})}
+          />
+          <Input 
+            label="E-mail"
+            type="email"
+            required
+            value={editingUser?.email || ''}
+            onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
+          />
+          <Input 
+            label="ID do Clerk"
+            value={editingUser?.clerk_user_id || ''}
+            onChange={(e) => setEditingUser({...editingUser, clerk_user_id: e.target.value})}
+            placeholder="user_..."
+            description="Opcional. Vincule manualmente se necessário."
+          />
+
+          <div className="flex gap-3 pt-4">
+            <Button variant="ghost" className="flex-1" onClick={() => setIsEditModalOpen(false)} disabled={submittingEdit}>
+              Cancelar
+            </Button>
+            <Button variant="primary" type="submit" className="flex-1 bg-navy-900" isLoading={submittingEdit}>
+              Salvar Alterações
             </Button>
           </div>
         </form>
