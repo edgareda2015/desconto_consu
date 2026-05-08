@@ -174,9 +174,9 @@ export default function Coordenador() {
         title="Instruções da Coordenação"
         icon={<Ticket className="text-brand-blue" size={24} />}
         steps={[
-          { text: 'Clique em <strong>"Ver PDF"</strong> para analisar o parecer técnico enviado pelo professor.' },
-          { text: 'Use <strong>"Abrir Chamado"</strong> para inserir o número do ticket e autorizar o processo.' },
-          { text: 'Após o chamado, decida pelo <strong>Deferimento</strong> ou <strong>Indeferimento</strong> final da solicitação.' }
+          { text: 'Clique em <strong>"Ver PDF"</strong> e depois no ícone de <strong>disquete (Salvar)</strong> para baixar o parecer do professor.' },
+          { text: 'Com o PDF em mãos, abra o chamado no sistema e depois clique em <strong>"Abrir Chamado"</strong> aqui para registrar o número.' },
+          { text: 'Após registrar o chamado, finalize a solicitação decidindo pelo <strong>Deferimento</strong> ou <strong>Indeferimento</strong>.' }
         ]}
       />
 
