@@ -8,7 +8,8 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { TableSkeleton } from '../components/ui/Skeleton';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Input } from '../components/ui/Input';
-import { Save, Users, AlertCircle, Settings2, Check, X, Plus, UserPlus, Trash2, Edit2 } from 'lucide-react';
+import { Save, Users, AlertCircle, Settings2, Check, X, Plus, UserPlus, Trash2, Edit2, HelpCircle } from 'lucide-react';
+import { QuickGuide } from '../components/ui/QuickGuide';
 import toast from 'react-hot-toast';
 
 export default function Admin() {
@@ -201,31 +202,16 @@ export default function Admin() {
         }
       />
 
-      {/* Guia de Instruções para o Admin */}
-      <div className="bg-gradient-to-r from-navy-50 to-white border border-navy-100 rounded-2xl p-5 mb-8 shadow-sm">
-        <div className="flex items-start gap-4">
-          <div className="bg-brand-blue/10 p-2.5 rounded-xl">
-            <Users className="text-brand-blue" size={24} />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-navy-900 font-bold text-[15px] mb-2">Gestão de Usuários</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex gap-2.5">
-                <span className="flex items-center justify-center h-5 w-5 rounded-full bg-brand-blue text-white text-[11px] font-bold shrink-0 mt-0.5">1</span>
-                <p className="text-[12px] text-navy-600 leading-snug">Use <strong>"Novo Usuário"</strong> para criar contas e definir o primeiro acesso.</p>
-              </div>
-              <div className="flex gap-2.5">
-                <span className="flex items-center justify-center h-5 w-5 rounded-full bg-brand-blue text-white text-[11px] font-bold shrink-0 mt-0.5">2</span>
-                <p className="text-[12px] text-navy-600 leading-snug">Altere o <strong>Perfil Atual</strong> para definir o que o usuário pode ver no sistema.</p>
-              </div>
-              <div className="flex gap-2.5">
-                <span className="flex items-center justify-center h-5 w-5 rounded-full bg-brand-blue text-white text-[11px] font-bold shrink-0 mt-0.5">3</span>
-                <p className="text-[12px] text-navy-600 leading-snug">Para <strong>Coordenadores</strong>, clique no botão de engrenagem para vincular seus cursos.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <QuickGuide 
+        storageKey="admin"
+        title="Gestão de Usuários"
+        icon={<Users className="text-brand-blue" size={24} />}
+        steps={[
+          { text: 'Use <strong>"Novo Usuário"</strong> para criar contas e definir o primeiro acesso.' },
+          { text: 'Altere o <strong>Perfil Atual</strong> para definir o que o usuário pode ver no sistema.' },
+          { text: 'Para <strong>Coordenadores</strong>, clique no botão de engrenagem para vincular seus cursos.' }
+        ]}
+      />
 
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3 shadow-sm">
         <AlertCircle className="text-amber-500 shrink-0 mt-0.5" size={20} />
