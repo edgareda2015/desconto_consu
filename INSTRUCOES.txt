@@ -1,0 +1,33 @@
+Instruções para Execução do Sistema
+
+1. PREPARAÇÃO DO AMBIENTE EXTERNO
+
+A) CLERK (Autenticação)
+- Crie uma conta no Clerk (clerk.com)
+- Crie um novo aplicativo
+- Pegue sua "Publishable Key" no Dashboard
+
+B) SUPABASE (Banco de Dados e Storage)
+- Crie uma conta no Supabase (supabase.com) e inicie um novo projeto
+- Acesse SQL Editor e cole o conteúdo inteiro do arquivo `SCRIPT_SQL.sql` e execute.
+- Pegue sua "Project URL" e "anon key" nas configurações de API.
+- Adicione manualmente na tabela `usuarios_perfis` o ID do seu primeiro usuário Clerk criado, dando a ele o perfil 'admin'.
+
+2. PREPARAÇÃO DO PROJETO LOCAL
+
+- Certifique-se de ter o Node.js instalado (v18 ou superior).
+- Abra o terminal na pasta do projeto.
+- Instale as dependências:
+  npm install
+
+- Crie um arquivo `.env` na raiz do projeto e preencha com as suas chaves:
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
+VITE_SUPABASE_URL=https://...supabase.co
+VITE_SUPABASE_ANON_KEY=ey...
+
+3. EXECUTAR O SISTEMA
+
+- No terminal, rode o comando:
+  npm run dev
+
+- Acesse `http://localhost:5173` no seu navegador.

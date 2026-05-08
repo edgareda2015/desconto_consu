@@ -1,20 +1,46 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Portal de Descontos Acadêmicos — UNINASSAU Olinda
 
-# Run and deploy your AI Studio app
+Sistema ERP SaaS para gestão de fluxos de descontos acadêmicos.
 
-This contains everything you need to run your app locally.
+## 🚀 Tecnologias
 
-View your app in AI Studio: https://ai.studio/apps/drive/1JiQL_fZqBDgjL8Yqy2-Q8M6IOmRiMccC
+- **Frontend**: React + Vite + TypeScript
+- **Auth**: Clerk (ClerkProvider)
+- **Database**: Supabase (PostgreSQL + RLS)
+- **Design**: Vanilla CSS (baseado no projeto_real.html)
 
-## Run Locally
+## ⚙️ Configuração
 
-**Prerequisites:**  Node.js
+1. Clone o repositório.
+2. Instale as dependências:
+   ```bash
+   npm install
+   ```
+3. Configure o arquivo `.env` com as seguintes variáveis:
+   ```env
+   VITE_SUPABASE_URL=https://jnujinqtjcuebzrqknqf.supabase.co
+   VITE_SUPABASE_ANON_KEY=sua_chave_anon_aqui
+   VITE_CLERK_PUBLISHABLE_KEY=sua_chave_clerk_aqui
+   ```
+4. Configure os metadados do usuário no Clerk Dashboard:
+   - Adicione `role` (`admin`, `diretor`, `coordenador` ou `comercial`) em `publicMetadata`.
 
+## 🛠️ Fluxo de Trabalho
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+1. **Comercial**: Cria a solicitação (Status: `Aguardando análise`).
+2. **Diretor**: Baixa os blocos (PDF/Excel), revisa e confirma o retorno (Status: `Liberado para coordenação`).
+3. **Coordenador**: Abre chamado (Status: `Chamado aberto`) e defere/indefere o pedido.
+4. **Comercial (Ajuste)**: Caso seja indeferido, o comercial pode clicar em "Ajustar" para voltar o pedido para a fila de análise.
+
+## 📦 Estrutura do Banco
+
+- `cursos`: Catálogo de cursos.
+- `solicitacoes`: Registro central dos pedidos e status.
+- `blocos`: Gestão de lotes de análise semanal do diretor.
+- `storage/comprovantes`: Armazenamento de termos e deferimentos.
+
+## 🏃 Executando
+
+```bash
+npm run dev
+```
