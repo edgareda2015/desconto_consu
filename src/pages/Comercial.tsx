@@ -356,26 +356,6 @@ export default function Comercial() {
             <div className="space-y-4">
               <h4 className="text-[14px] font-bold text-navy-900 border-l-4 border-brand-blue pl-3">Localização e Mensalidades</h4>
               <div className="grid grid-cols-2 gap-4">
-                <Select 
-                  label="Regional" 
-                  required 
-                  name="regional" 
-                  value={formData.regional} 
-                  onChange={handleInputChange} 
-                  options={regionals.length > 0 ? regionals.map(r => ({ value: r.name, label: r.name })) : [{ value: 'Regional A', label: 'Regional A' }]}
-                  disabled={regionals.length <= 1}
-                />
-                <Select 
-                  label="Unidade" 
-                  required 
-                  name="unidade" 
-                  value={formData.unidade} 
-                  onChange={handleInputChange} 
-                  options={units.length > 0 ? units.map(u => ({ value: u.name, label: u.name })) : [{ value: 'OLINDA', label: 'OLINDA' }]}
-                  disabled={units.length <= 1}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
                 <Input 
                   label="Mensalidade Atual" 
                   type="number" 
