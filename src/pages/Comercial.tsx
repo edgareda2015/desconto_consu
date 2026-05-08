@@ -26,21 +26,16 @@ export default function Comercial() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rejectionMessage, setRejectionMessage] = useState<string | null>(null);
 
-  const cursos = [
-    'ADMINISTRAÇÃO', 'ANÁLISE E DESENVOLVIMENTO DE SISTEMAS', 
-    'BIOMEDICINA', 'CIÊNCIA DA COMPUTAÇÃO', 'CIÊNCIAS CONTÁBEIS', 
-    'DIREITO', 'DISCIPLINA ISOLADA', 'ENFERMAGEM', 'FARMÁCIA', 
-    'FISIOTERAPIA', 'NUTRIÇÃO', 'ODONTOLOGIA', 'PEDAGOGIA', 
-    'PSICOLOGIA', 'SERVIÇO SOCIAL', 'SISTEMAS DE INFORMAÇÃO', 
-    'TERAPIA OCUPACIONAL'
-  ];
-
+  const [cursosPrecos, setCursosPrecos] = useState<any[]>([]);
+  
   // Form state
   const [formData, setFormData] = useState({
     nome: '',
     inscricao: '',
     cpf: '',
     curso: '',
+    turno: '',
+    modalidade: 'VES/ENE',
     mensalidade_atual: '',
     desc_percentual_atual: '',
     mensalidade_solicitada: '',
@@ -55,16 +50,18 @@ export default function Comercial() {
 
   const fetchData = async () => {
     try {
-      const [solRes, unitRes, regRes] = await Promise.all([
+      const [solRes, unitRes, regRes, cursosRes] = await Promise.all([
         supabase.from('solicitacoes').select('*').order('created_at', { ascending: false }),
         supabase.from('units').select('*'),
-        supabase.from('regionals').select('*')
+        supabase.from('regionals').select('*'),
+        supabase.from('cursos_precos').select('*').order('curso', { ascending: true })
       ]);
       
       if (solRes.error) throw solRes.error;
       setSolicitacoes(solRes.data || []);
       setUnits(unitRes.data || []);
       setRegionals(regRes.data || []);
+      setCursosPrecos(cursosRes.data || []);
     } catch (err) {
       toast.error('Erro ao carregar dados');
       console.error(err);
@@ -75,7 +72,32 @@ export default function Comercial() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Auto-preenchimento baseado na planilha
+    if (name === 'curso' || name === 'turno' || name === 'modalidade') {
+      const updatedFormData = { ...formData, [name]: value };
+      const cursoEncontrado = cursosPrecos.find(c => 
+        c.curso === (name === 'curso' ? value : formData.curso) && 
+        c.turno === (name === 'turno' ? value : formData.turno)
+      );
+
+      if (cursoEncontrado) {
+        const isVes = (name === 'modalidade' ? value : formData.modalidade) === 'VES/ENE';
+        updatedFormData.mensalidade_atual = cursoEncontrado.mensalidade_bruta?.toString() || '';
+        updatedFormData.desc_percentual_atual = isVes 
+          ? (cursoEncontrado.desc_percentual_ves_ene * 100).toFixed(0) 
+          : (cursoEncontrado.desc_percentual_trf_pdd * 100).toFixed(0);
+        
+        // Sugerir mensalidade solicitada já com desconto
+        const valorComDesconto = isVes ? cursoEncontrado.mensalidade_ves_ene : cursoEncontrado.mensalidade_trf_pdd;
+        updatedFormData.mensalidade_solicitada = valorComDesconto?.toString() || '';
+        updatedFormData.desc_percentual_solicitado = updatedFormData.desc_percentual_atual;
+      }
+      
+      setFormData(updatedFormData);
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,7 +144,7 @@ export default function Comercial() {
       setEditingId(null);
       setRejectionMessage(null);
       setFormData({ 
-        nome: '', inscricao: '', cpf: '', curso: '', 
+        nome: '', inscricao: '', cpf: '', curso: '', turno: '', modalidade: 'VES/ENE',
         mensalidade_atual: '', desc_percentual_atual: '', 
         mensalidade_solicitada: '', desc_percentual_solicitado: '', 
         unidade: 'OLINDA', regional: 'Regional A' 
@@ -359,10 +381,35 @@ export default function Comercial() {
                 name="curso" 
                 value={formData.curso} 
                 onChange={handleInputChange} 
-                options={cursos.map(c => ({ value: c, label: c }))}
+                options={Array.from(new Set(cursosPrecos.map(c => c.curso))).map(c => ({ value: c, label: c }))}
                 placeholder="Selecione o curso..."
                 icon={<GraduationCap size={16} />}
               />
+              <div className="grid grid-cols-2 gap-4">
+                <Select 
+                  label="Turno" 
+                  required 
+                  name="turno" 
+                  value={formData.turno} 
+                  onChange={handleInputChange} 
+                  options={[
+                    { value: 'Manhã', label: 'Manhã' },
+                    { value: 'Noite', label: 'Noite' }
+                  ]}
+                  placeholder="Selecione..."
+                />
+                <Select 
+                  label="Modalidade Ingresso" 
+                  required 
+                  name="modalidade" 
+                  value={formData.modalidade} 
+                  onChange={handleInputChange} 
+                  options={[
+                    { value: 'VES/ENE', label: 'VES/ENE' },
+                    { value: 'TRF/PDD', label: 'TRF/PDD' }
+                  ]}
+                />
+              </div>
             </div>
 
             <div className="space-y-4">
