@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@clerk/clerk-react';
+import { useAppAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
@@ -10,12 +11,13 @@ import { Table, Thead, Tbody, Tr, Th, Td } from '../components/ui/Table';
 import { EmptyState } from '../components/ui/EmptyState';
 import { TableSkeleton } from '../components/ui/Skeleton';
 import { PageHeader } from '../components/ui/PageHeader';
-import { Plus, FileText, Search, GraduationCap, AlertCircle, HelpCircle } from 'lucide-react';
+import { Plus, FileText, Search, GraduationCap, AlertCircle, HelpCircle, Filter, X, Trash2 } from 'lucide-react';
 import { QuickGuide } from '../components/ui/QuickGuide';
 import toast from 'react-hot-toast';
 
 export default function Comercial() {
   const { user } = useUser();
+  const { perfil } = useAppAuth();
   const [solicitacoes, setSolicitacoes] = useState<any[]>([]);
   const [units, setUnits] = useState<any[]>([]);
   const [regionals, setRegionals] = useState<any[]>([]);
@@ -23,6 +25,11 @@ export default function Comercial() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [cursoFilter, setCursoFilter] = useState('');
+  const [turnoFilter, setTurnoFilter] = useState('');
+  const [dataFilter, setDataFilter] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rejectionMessage, setRejectionMessage] = useState<string | null>(null);
   const [cursosPrecos, setCursosPrecos] = useState<any[]>([]);
@@ -45,7 +52,7 @@ export default function Comercial() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [user]);
 
   const fetchData = async () => {
     try {
@@ -134,6 +141,7 @@ export default function Comercial() {
     try {
       const selectedUnit = units.find(u => u.name === formData.unidade);
       const selectedReg = regionals.find(r => r.name === formData.regional);
+      
       const payload = {
         ...formData,
         mensalidade_atual: parseFloat(formData.mensalidade_atual) || 0,
@@ -189,11 +197,59 @@ export default function Comercial() {
     setIsModalOpen(true);
   };
 
-  const filteredData = solicitacoes.filter(req => 
-    req.nome?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    req.cpf?.includes(searchTerm) || 
-    req.inscricao?.includes(searchTerm)
-  );
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Tem certeza que deseja excluir esta solicitação permanentemente?')) {
+      return;
+    }
+    try {
+      const { error } = await supabase.from('solicitacoes').delete().eq('id', id);
+      if (error) throw error;
+      toast.success('Solicitação excluída!');
+      fetchData();
+    } catch (err) {
+      toast.error('Erro ao excluir solicitação');
+    }
+  };
+
+  const filteredData = solicitacoes.filter(req => {
+    const term = searchTerm.toLowerCase();
+    const matchSearch = term === '' || 
+      (req.nome?.toLowerCase().includes(term)) || 
+      (req.cpf?.includes(term)) || 
+      (req.inscricao?.includes(term));
+
+    const matchStatus = statusFilter === '' || req.status === statusFilter;
+    const matchCurso = cursoFilter === '' || req.curso === cursoFilter;
+    const matchTurno = turnoFilter === '' || req.turno === turnoFilter;
+
+    let matchData = true;
+    if (dataFilter !== '') {
+      const reqDate = new Date(req.created_at || req.data_solicitacao);
+      const now = new Date();
+      const diffTime = Math.abs(now.getTime() - reqDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (dataFilter === '7') matchData = diffDays <= 7;
+      else if (dataFilter === '30') matchData = diffDays <= 30;
+      else if (dataFilter === 'mes') {
+        matchData = reqDate.getMonth() === now.getMonth() && reqDate.getFullYear() === now.getFullYear();
+      }
+    }
+
+    return matchSearch && matchStatus && matchCurso && matchTurno && matchData;
+  });
+
+  const uniqueCursos = Array.from(new Set(solicitacoes.map(req => req.curso).filter(Boolean)));
+  const uniqueTurnos = Array.from(new Set(solicitacoes.map(req => req.turno).filter(Boolean)));
+  const activeFiltersCount = [statusFilter, cursoFilter, turnoFilter, dataFilter].filter(f => f !== '').length;
+
+  const clearFilters = () => {
+    setStatusFilter('');
+    setCursoFilter('');
+    setTurnoFilter('');
+    setDataFilter('');
+    setSearchTerm('');
+  };
 
   return (
     <div className="section-gap animate-fade-in">
@@ -203,32 +259,99 @@ export default function Comercial() {
         action={<Button onClick={() => setIsModalOpen(true)} icon={<Plus size={18} />}>Nova Solicitação</Button>}
       />
 
-      <div className="mb-4 relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-        <input 
-          type="text" placeholder="Buscar..."
-          className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg outline-none"
-          value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-        />
+      <div className="mb-6 space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="relative w-full sm:w-96">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input 
+              type="text" placeholder="Buscar por inscrição, CPF ou nome..."
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+              value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={() => setShowFilters(!showFilters)} 
+            className={`flex items-center gap-2 ${activeFiltersCount > 0 ? 'border-brand-blue text-brand-blue bg-blue-50' : ''}`}
+          >
+            <Filter size={18} /> Filtros Avançados {activeFiltersCount > 0 && `(${activeFiltersCount})`}
+          </Button>
+        </div>
+
+        {showFilters && (
+          <div className="p-4 bg-white border border-slate-200 rounded-xl grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in relative">
+            {activeFiltersCount > 0 && (
+              <button 
+                onClick={clearFilters}
+                className="absolute top-3 right-4 text-xs font-medium text-slate-500 hover:text-red-500 flex items-center gap-1 p-1 rounded-md hover:bg-red-50 transition-colors"
+              >
+                <X size={14} /> Limpar Filtros
+              </button>
+            )}
+            <div className={activeFiltersCount > 0 ? "mt-4 lg:mt-0" : ""}>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">Status da Solicitação</label>
+              <select className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-brand-blue" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+                <option value="">Todos</option>
+                <option value="Aguardando análise">Aguardando análise</option>
+                <option value="Deferido">Deferido</option>
+                <option value="Indeferido">Indeferido</option>
+              </select>
+            </div>
+            <div className={activeFiltersCount > 0 ? "mt-4 lg:mt-0" : ""}>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">Curso</label>
+              <select className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-brand-blue" value={cursoFilter} onChange={e => setCursoFilter(e.target.value)}>
+                <option value="">Todos os cursos</option>
+                {uniqueCursos.map((c: any) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className={activeFiltersCount > 0 ? "mt-4 lg:mt-0" : ""}>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">Turno</label>
+              <select className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-brand-blue" value={turnoFilter} onChange={e => setTurnoFilter(e.target.value)}>
+                <option value="">Todos os turnos</option>
+                {uniqueTurnos.map((t: any) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div className={activeFiltersCount > 0 ? "mt-4 lg:mt-0" : ""}>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">Período da Solicitação</label>
+              <select className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-brand-blue" value={dataFilter} onChange={e => setDataFilter(e.target.value)}>
+                <option value="">Todas as datas</option>
+                <option value="7">Últimos 7 dias</option>
+                <option value="30">Últimos 30 dias</option>
+                <option value="mes">Este mês</option>
+              </select>
+            </div>
+          </div>
+        )}
       </div>
 
       <Table>
         <Thead>
           <Tr>
-            <Th>Inscrição</Th><Th>Nome</Th><Th>Curso</Th><Th>Mens. Atual</Th><Th>Desc. % Atual</Th>
-            <Th>Mens. Solicitada</Th><Th>Desc. % Solicitado</Th><Th>Status</Th><Th align="right">Ações</Th>
+            <Th>Inscrição</Th><Th>CPF/RA</Th><Th>Nome</Th><Th>Curso</Th><Th>Turno</Th><Th>Mens. Atual</Th><Th>Desc. % Atual</Th>
+            <Th>Mens. Solicitada</Th><Th>Desc. % Solicitado</Th><Th>Consultor</Th><Th>Data</Th><Th>Status</Th><Th align="right">Ações</Th>
           </Tr>
         </Thead>
         <Tbody>
-          {loading ? <Tr><Td colSpan={9}><TableSkeleton rows={5} cols={9} /></Td></Tr> : 
+          {loading ? <Tr><Td colSpan={13}><TableSkeleton rows={5} cols={13} /></Td></Tr> : 
             filteredData.map((req) => (
               <Tr key={req.id} className={getRowColorClass(req.status, req.reprocessada)}>
-                <Td>{req.inscricao}</Td><Td className="font-bold">{req.nome}</Td><Td>{req.curso}</Td>
+                <Td>{req.inscricao}</Td><Td>{req.cpf}</Td><Td className="font-bold">{req.nome}</Td><Td>{req.curso}</Td><Td>{req.turno}</Td>
                 <Td>{formatCurrency(req.mensalidade_atual)}</Td><Td align="center">{req.desc_percentual_atual}%</Td>
                 <Td className="font-bold text-brand-blue">{formatCurrency(req.mensalidade_solicitada)}</Td>
-                <Td align="center">{req.desc_percentual_solicitado}%</Td><Td><StatusBadge status={req.status} /></Td>
+                <Td align="center">{req.desc_percentual_solicitado}%</Td><Td>{req.consultor}</Td><Td>{new Date(req.created_at).toLocaleDateString('pt-BR')}</Td><Td><StatusBadge status={req.status} /></Td>
                 <Td align="right">
-                  {req.status === 'Indeferido' && <Button size="sm" variant="outline" onClick={() => handleEdit(req)}>Editar</Button>}
+                  <div className="flex justify-end items-center gap-2">
+                    {req.status === 'Indeferido' && <Button size="sm" variant="outline" onClick={() => handleEdit(req)}>Editar</Button>}
+                    {perfil?.perfil === 'admin' && (
+                      <button 
+                        onClick={() => handleDelete(req.id)}
+                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Excluir"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
                 </Td>
               </Tr>
             ))

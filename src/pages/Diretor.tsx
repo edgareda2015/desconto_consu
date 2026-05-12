@@ -142,11 +142,12 @@ export default function Diretor() {
         'CPF/Matricula': s.cpf,
         'Nome': s.nome,
         'Curso': s.curso,
+        'Turno': s.turno || '-',
         'Mens. Atual': s.mensalidade_atual ? `R$ ${s.mensalidade_atual.toFixed(2)}` : '-',
         'Desc. % Atual': `${s.desc_percentual_atual}%`,
         'Mens. Solicitada': s.mensalidade_solicitada ? `R$ ${s.mensalidade_solicitada.toFixed(2)}` : '-',
         'Desc. % Solicitado': `${s.desc_percentual_solicitado}%`,
-        'Data': new Date(s.data_solicitacao).toLocaleDateString('pt-BR'),
+        'Data': new Date(s.created_at || s.data_solicitacao).toLocaleDateString('pt-BR'),
         'Consultor': s.consultor
       }));
 
@@ -189,16 +190,17 @@ export default function Diretor() {
         s.cpf || '-',
         s.nome || '-',
         s.curso || '-',
+        s.turno || '-',
         s.mensalidade_atual ? `R$ ${Number(s.mensalidade_atual).toFixed(2)}` : '-',
         `${s.desc_percentual_atual || 0}%`,
         s.mensalidade_solicitada ? `R$ ${Number(s.mensalidade_solicitada).toFixed(2)}` : '-',
         `${s.desc_percentual_solicitado || 0}%`,
-        s.data_solicitacao ? new Date(s.data_solicitacao).toLocaleDateString('pt-BR') : '-',
+        new Date(s.created_at || s.data_solicitacao).toLocaleDateString('pt-BR'),
         s.consultor || '-'
       ]);
 
       autoTable(doc, {
-        head: [['Inscrição', 'CPF/Matric.', 'Nome', 'Curso', 'M. Atual', 'D. % At.', 'M. Solic.', 'D. % Sol.', 'Data', 'Consultor']],
+        head: [['Inscrição', 'CPF/Matric.', 'Nome', 'Curso', 'Turno', 'M. Atual', 'D. % At.', 'M. Solic.', 'D. % Sol.', 'Data', 'Consultor']],
         body: tableData,
         startY: 28,
         theme: 'striped',
@@ -216,16 +218,17 @@ export default function Diretor() {
           valign: 'middle'
         },
         columnStyles: {
-          0: { halign: 'center', cellWidth: 20 }, // Inscricao
-          1: { halign: 'center', cellWidth: 25 }, // CPF
-          2: { fontStyle: 'bold', textColor: [15, 23, 42], cellWidth: 50 }, // Nome (Negrito e mais largo)
-          3: { cellWidth: 45 }, // Curso
-          4: { halign: 'right' }, // M. Atual
-          5: { halign: 'center' }, // D. % At.
-          6: { halign: 'right' }, // M. Solic.
-          7: { halign: 'center', fontStyle: 'bold', textColor: [37, 99, 235] }, // D. % Sol. (Azul)
-          8: { halign: 'center' }, // Data
-          9: { fontSize: 8 } // Consultor
+          0: { halign: 'center', cellWidth: 16 }, // Inscricao
+          1: { halign: 'center', cellWidth: 22 }, // CPF
+          2: { fontStyle: 'bold', textColor: [15, 23, 42], cellWidth: 40 }, // Nome
+          3: { cellWidth: 30 }, // Curso
+          4: { cellWidth: 14 }, // Turno
+          5: { halign: 'right' }, // M. Atual
+          6: { halign: 'center' }, // D. % At.
+          7: { halign: 'right' }, // M. Solic.
+          8: { halign: 'center', fontStyle: 'bold', textColor: [37, 99, 235] }, // D. % Sol.
+          9: { halign: 'center', cellWidth: 16 }, // Data
+          10: { fontSize: 8 } // Consultor
         }
       });
 

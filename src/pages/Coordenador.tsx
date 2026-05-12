@@ -126,27 +126,17 @@ export default function Coordenador() {
 
   const handleIndeferirSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedMotivoId && !outroMotivo) {
-      toast.error('Selecione ou digite um motivo.');
+    if (!outroMotivo.trim()) {
+      toast.error('Digite o motivo do indeferimento.');
       return;
     }
 
     setSubmittingIndef(true);
     try {
-      let textoMotivo = '';
-      if (selectedMotivoId) {
-        const m = motivos.find(x => x.id === selectedMotivoId);
-        textoMotivo = m?.motivo || '';
-        if (textoMotivo.includes('Outro') && outroMotivo) {
-          textoMotivo = outroMotivo;
-        }
-      } else {
-        textoMotivo = outroMotivo;
-      }
 
       const { error } = await supabase
         .from('solicitacoes')
-        .update({ status: 'Indeferido', motivo_indeferimento: textoMotivo })
+        .update({ status: 'Indeferido', motivo_indeferimento: outroMotivo.trim() })
         .eq('id', actionId);
       
       if (error) throw error;
@@ -154,6 +144,7 @@ export default function Coordenador() {
       toast.success('Solicitação Indeferida.');
       setIndefModalOpen(false);
       setActionId(null);
+      setOutroMotivo('');
       fetchDados();
     } catch (err) {
       toast.error('Erro ao indeferir.');
@@ -337,24 +328,14 @@ export default function Coordenador() {
         description="Explique por que esta solicitação foi recusada. O aluno poderá ver este motivo."
       >
         <form onSubmit={handleIndeferirSubmit} className="space-y-5 mt-2">
-          <Select 
-            label="Selecione o Motivo"
+          <Textarea 
+            label="Descreva o motivo detalhadamente"
+            value={outroMotivo}
+            onChange={(e) => setOutroMotivo(e.target.value)}
             required
-            value={selectedMotivoId}
-            onChange={(e) => setSelectedMotivoId(e.target.value)}
-            options={motivos.map(m => ({ value: m.id, label: m.motivo }))}
-            placeholder="-- Escolha uma opção --"
+            placeholder="Digite aqui a justificativa clara para o comercial poder corrigir..."
+            rows={4}
           />
-
-          {(motivos.find(m => m.id === selectedMotivoId)?.motivo.includes('Outro') || !selectedMotivoId) && (
-            <Textarea 
-              label="Especifique o motivo detalhadamente"
-              value={outroMotivo}
-              onChange={(e) => setOutroMotivo(e.target.value)}
-              required={motivos.find(m => m.id === selectedMotivoId)?.motivo.includes('Outro')}
-              placeholder="Digite aqui a justificativa completa..."
-            />
-          )}
 
           <div className="flex justify-end gap-3 pt-4 border-t border-border mt-6">
             <Button type="button" variant="ghost" onClick={() => setIndefModalOpen(false)} disabled={submittingIndef}>
